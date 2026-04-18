@@ -27,8 +27,11 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
       const clone = res.clone();
-      caches.open(CACHE).then(c => c.put(e.request, clone));
+      caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => {});
       return res;
+    }).catch(() => {
+      if (e.request.mode === 'navigate') return caches.match('/');
+      return new Response('', { status: 503, statusText: 'Offline' });
     }))
   );
 });
