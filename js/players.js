@@ -62,6 +62,7 @@ export const PLAYERS = [
   {id:31, name:"C. Palmer",      team:"Chelsea",      pos:"MED", val:16, pts:89,  competition:"premier",    emoji:"⚡"},
   {id:32, name:"O. Watkins",     team:"Aston Villa",  pos:"DEL", val:14, pts:85,  competition:"premier",    emoji:"🔥"},
   {id:33, name:"Son H-M",        team:"Tottenham",    pos:"DEL", val:14, pts:82,  competition:"premier",    emoji:"🔥"},
+  {id:34, name:"T. Alexander-A",team:"Liverpool",    pos:"DEF", val:11, pts:76,  competition:"premier",    emoji:"🛡️"},
   // ── Champions League ──────────────────────────────────
   {id:40, name:"G. Donnarumma",  team:"PSG",          pos:"POR", val:12, pts:84,  competition:"champions",  emoji:"🧤"},
   {id:41, name:"M. Neuer",       team:"Bayern",       pos:"POR", val:10, pts:75,  competition:"champions",  emoji:"🧤"},
@@ -74,6 +75,7 @@ export const PLAYERS = [
   {id:48, name:"J. Musiala",     team:"Bayern",       pos:"MED", val:15, pts:86,  competition:"champions",  emoji:"⚡"},
   {id:49, name:"N. Barella",     team:"Inter",        pos:"MED", val:13, pts:82,  competition:"champions",  emoji:"⚡"},
   {id:50, name:"Vítinha",        team:"PSG",          pos:"MED", val:13, pts:81,  competition:"champions",  emoji:"⚡"},
+  {id:51, name:"R. Dias",        team:"Man City",     pos:"DEF", val:12, pts:79,  competition:"champions",  emoji:"🛡️"},
   // ── Bundesliga ────────────────────────────────────────
   {id:60, name:"O. Baumann",     team:"B. München",   pos:"POR", val: 8, pts:71,  competition:"bundesliga", emoji:"🧤"},
   {id:61, name:"G. ter Stegen",  team:"Barcelona",    pos:"POR", val:10, pts:76,  competition:"bundesliga", emoji:"🧤"},
@@ -87,6 +89,7 @@ export const PLAYERS = [
   {id:69, name:"V. Boniface",    team:"Leverkusen",   pos:"DEL", val:15, pts:87,  competition:"bundesliga", emoji:"🔥"},
   {id:70, name:"H. Füllkrug",    team:"Dortmund",     pos:"DEL", val:12, pts:78,  competition:"bundesliga", emoji:"🔥"},
   {id:71, name:"J. Beier",       team:"Hoffenheim",   pos:"DEL", val:11, pts:74,  competition:"bundesliga", emoji:"🔥"},
+  {id:72, name:"A. Schlotterbeck",team:"Dortmund",   pos:"DEF", val: 9, pts:70,  competition:"bundesliga", emoji:"🛡️"},
   // ── Serie A ───────────────────────────────────────────
   {id:80, name:"G. Donnarumma",  team:"PSG/Italia",   pos:"POR", val:11, pts:78,  competition:"seriea",     emoji:"🧤"},
   {id:81, name:"M. Maignan",     team:"AC Milan",     pos:"POR", val:10, pts:75,  competition:"seriea",     emoji:"🧤"},
@@ -100,6 +103,8 @@ export const PLAYERS = [
   {id:89, name:"V. Osimhen",     team:"Napoli",       pos:"DEL", val:18, pts:93,  competition:"seriea",     emoji:"🔥"},
   {id:90, name:"R. Leão",        team:"AC Milan",     pos:"DEL", val:16, pts:88,  competition:"seriea",     emoji:"🔥"},
   {id:91, name:"P. Dybala",      team:"Roma",         pos:"DEL", val:14, pts:82,  competition:"seriea",     emoji:"🔥"},
+  {id:92, name:"G. Mancini",     team:"Roma",         pos:"DEF", val: 8, pts:64,  competition:"seriea",     emoji:"🛡️"},
+  {id:93, name:"S. Tonali",      team:"AC Milan",     pos:"MED", val:11, pts:76,  competition:"seriea",     emoji:"⚡"},
   // ── Ligue 1 ───────────────────────────────────────────
   {id:100,name:"G. Donnarumma",  team:"PSG",          pos:"POR", val:12, pts:81,  competition:"ligue1",     emoji:"🧤"},
   {id:101,name:"B. Samba",       team:"Lens",         pos:"POR", val: 8, pts:70,  competition:"ligue1",     emoji:"🧤"},
@@ -112,6 +117,8 @@ export const PLAYERS = [
   {id:108,name:"O. Dembélé",     team:"PSG",          pos:"DEL", val:16, pts:87,  competition:"ligue1",     emoji:"🔥"},
   {id:109,name:"M. Thuram",      team:"Inter/Fr",     pos:"DEL", val:14, pts:83,  competition:"ligue1",     emoji:"🔥"},
   {id:110,name:"T. Weah",        team:"Juventus/Fr",  pos:"DEL", val:10, pts:68,  competition:"ligue1",     emoji:"🔥"},
+  {id:111,name:"B. Koné",        team:"Monaco",       pos:"DEF", val: 9, pts:67,  competition:"ligue1",     emoji:"🛡️"},
+  {id:112,name:"W. Khazri",      team:"Montpellier",  pos:"MED", val: 8, pts:63,  competition:"ligue1",     emoji:"⚡"},
 ];
 
 export function getPlayer(id) {
