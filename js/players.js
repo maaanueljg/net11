@@ -1,0 +1,123 @@
+export const COMPETITIONS = {
+  laliga:     { key: 'laliga',     label: '🇪🇸 LaLiga' },
+  premier:    { key: 'premier',    label: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League' },
+  bundesliga: { key: 'bundesliga', label: '🇩🇪 Bundesliga' },
+  seriea:     { key: 'seriea',     label: '🇮🇹 Serie A' },
+  ligue1:     { key: 'ligue1',     label: '🇫🇷 Ligue 1' },
+  champions:  { key: 'champions',  label: '⭐ Champions League' },
+};
+
+export const FORMATIONS = {
+  "4-3-3": [
+    {pos:"POR",r:1,c:3},
+    {pos:"DEF",r:2,c:1},{pos:"DEF",r:2,c:2},{pos:"DEF",r:2,c:4},{pos:"DEF",r:2,c:5},
+    {pos:"MED",r:3,c:2},{pos:"MED",r:3,c:3},{pos:"MED",r:3,c:4},
+    {pos:"DEL",r:4,c:1},{pos:"DEL",r:4,c:3},{pos:"DEL",r:4,c:5},
+  ],
+  "4-4-2": [
+    {pos:"POR",r:1,c:3},
+    {pos:"DEF",r:2,c:1},{pos:"DEF",r:2,c:2},{pos:"DEF",r:2,c:4},{pos:"DEF",r:2,c:5},
+    {pos:"MED",r:3,c:1},{pos:"MED",r:3,c:2},{pos:"MED",r:3,c:4},{pos:"MED",r:3,c:5},
+    {pos:"DEL",r:4,c:2},{pos:"DEL",r:4,c:4},
+  ],
+  "3-5-2": [
+    {pos:"POR",r:1,c:3},
+    {pos:"DEF",r:2,c:2},{pos:"DEF",r:2,c:3},{pos:"DEF",r:2,c:4},
+    {pos:"MED",r:3,c:1},{pos:"MED",r:3,c:2},{pos:"MED",r:3,c:3},{pos:"MED",r:3,c:4},{pos:"MED",r:3,c:5},
+    {pos:"DEL",r:4,c:2},{pos:"DEL",r:4,c:4},
+  ],
+};
+
+export const PLAYERS = [
+  // ── LaLiga ────────────────────────────────────────────
+  {id:1,  name:"T. Courtois",    team:"Real Madrid",  pos:"POR", val:12, pts:87,  competition:"laliga",     emoji:"🧤"},
+  {id:2,  name:"M. Oblak",       team:"Atlético",     pos:"POR", val:11, pts:79,  competition:"laliga",     emoji:"🧤"},
+  {id:3,  name:"I. Peña",        team:"Barcelona",    pos:"POR", val: 7, pts:65,  competition:"laliga",     emoji:"🧤"},
+  {id:4,  name:"D. Carvajal",    team:"Real Madrid",  pos:"DEF", val:10, pts:74,  competition:"laliga",     emoji:"🛡️"},
+  {id:5,  name:"F. Mendy",       team:"Real Madrid",  pos:"DEF", val: 8, pts:68,  competition:"laliga",     emoji:"🛡️"},
+  {id:6,  name:"J. Gayà",        team:"Valencia",     pos:"DEF", val: 7, pts:61,  competition:"laliga",     emoji:"🛡️"},
+  {id:7,  name:"R. Le Normand",  team:"Atlético",     pos:"DEF", val: 9, pts:70,  competition:"laliga",     emoji:"🛡️"},
+  {id:8,  name:"Pedri",          team:"Barcelona",    pos:"MED", val:14, pts:88,  competition:"laliga",     emoji:"⚡"},
+  {id:9,  name:"F. Valverde",    team:"Real Madrid",  pos:"MED", val:13, pts:85,  competition:"laliga",     emoji:"⚡"},
+  {id:10, name:"T. Kroos",       team:"Real Madrid",  pos:"MED", val:12, pts:82,  competition:"laliga",     emoji:"⚡"},
+  {id:11, name:"Gavi",           team:"Barcelona",    pos:"MED", val:11, pts:78,  competition:"laliga",     emoji:"⚡"},
+  {id:12, name:"Vinicius Jr",    team:"Real Madrid",  pos:"DEL", val:20, pts:98,  competition:"laliga",     emoji:"🔥"},
+  {id:13, name:"R. Lewandowski", team:"Barcelona",    pos:"DEL", val:18, pts:94,  competition:"laliga",     emoji:"🔥"},
+  {id:14, name:"Bellingham",     team:"Real Madrid",  pos:"DEL", val:19, pts:96,  competition:"laliga",     emoji:"🔥"},
+  {id:15, name:"A. Griezmann",   team:"Atlético",     pos:"DEL", val:15, pts:89,  competition:"laliga",     emoji:"🔥"},
+  {id:16, name:"Rodrygo",        team:"Real Madrid",  pos:"DEL", val:14, pts:84,  competition:"laliga",     emoji:"🔥"},
+  {id:17, name:"A. Yamal",       team:"Barcelona",    pos:"DEL", val:17, pts:92,  competition:"laliga",     emoji:"🔥"},
+  // ── Premier League ────────────────────────────────────
+  {id:20, name:"A. Raya",        team:"Arsenal",      pos:"POR", val:10, pts:80,  competition:"premier",    emoji:"🧤"},
+  {id:21, name:"E. Martínez",    team:"Aston Villa",  pos:"POR", val:11, pts:82,  competition:"premier",    emoji:"🧤"},
+  {id:22, name:"A. Arnold",      team:"Liverpool",    pos:"DEF", val:13, pts:86,  competition:"premier",    emoji:"🛡️"},
+  {id:23, name:"K. Walker",      team:"Man City",     pos:"DEF", val:10, pts:74,  competition:"premier",    emoji:"🛡️"},
+  {id:24, name:"B. White",       team:"Arsenal",      pos:"DEF", val: 9, pts:72,  competition:"premier",    emoji:"🛡️"},
+  {id:25, name:"M. Salah",       team:"Liverpool",    pos:"DEL", val:20, pts:99,  competition:"premier",    emoji:"🔥"},
+  {id:26, name:"E. Haaland",     team:"Man City",     pos:"DEL", val:22, pts:101, competition:"premier",    emoji:"🔥"},
+  {id:27, name:"B. Saka",        team:"Arsenal",      pos:"DEL", val:18, pts:93,  competition:"premier",    emoji:"🔥"},
+  {id:28, name:"P. Foden",       team:"Man City",     pos:"MED", val:16, pts:90,  competition:"premier",    emoji:"⚡"},
+  {id:29, name:"M. De Bruyne",   team:"Man City",     pos:"MED", val:17, pts:88,  competition:"premier",    emoji:"⚡"},
+  {id:30, name:"D. Rice",        team:"Arsenal",      pos:"MED", val:14, pts:83,  competition:"premier",    emoji:"⚡"},
+  {id:31, name:"C. Palmer",      team:"Chelsea",      pos:"MED", val:16, pts:89,  competition:"premier",    emoji:"⚡"},
+  {id:32, name:"O. Watkins",     team:"Aston Villa",  pos:"DEL", val:14, pts:85,  competition:"premier",    emoji:"🔥"},
+  {id:33, name:"Son H-M",        team:"Tottenham",    pos:"DEL", val:14, pts:82,  competition:"premier",    emoji:"🔥"},
+  // ── Champions League ──────────────────────────────────
+  {id:40, name:"G. Donnarumma",  team:"PSG",          pos:"POR", val:12, pts:84,  competition:"champions",  emoji:"🧤"},
+  {id:41, name:"M. Neuer",       team:"Bayern",       pos:"POR", val:10, pts:75,  competition:"champions",  emoji:"🧤"},
+  {id:42, name:"T. Hernández",   team:"Bayern",       pos:"DEF", val:11, pts:78,  competition:"champions",  emoji:"🛡️"},
+  {id:43, name:"R. Hakimi",      team:"PSG",          pos:"DEF", val:12, pts:80,  competition:"champions",  emoji:"🛡️"},
+  {id:44, name:"A. Davies",      team:"Bayern",       pos:"DEF", val:10, pts:74,  competition:"champions",  emoji:"🛡️"},
+  {id:45, name:"K. Mbappé",      team:"Real Madrid",  pos:"DEL", val:22, pts:97,  competition:"champions",  emoji:"🔥"},
+  {id:46, name:"H. Kane",        team:"Bayern",       pos:"DEL", val:19, pts:95,  competition:"champions",  emoji:"🔥"},
+  {id:47, name:"V. Osimhen",     team:"Napoli",       pos:"DEL", val:16, pts:88,  competition:"champions",  emoji:"🔥"},
+  {id:48, name:"J. Musiala",     team:"Bayern",       pos:"MED", val:15, pts:86,  competition:"champions",  emoji:"⚡"},
+  {id:49, name:"N. Barella",     team:"Inter",        pos:"MED", val:13, pts:82,  competition:"champions",  emoji:"⚡"},
+  {id:50, name:"Vítinha",        team:"PSG",          pos:"MED", val:13, pts:81,  competition:"champions",  emoji:"⚡"},
+  // ── Bundesliga ────────────────────────────────────────
+  {id:60, name:"O. Baumann",     team:"B. München",   pos:"POR", val: 8, pts:71,  competition:"bundesliga", emoji:"🧤"},
+  {id:61, name:"G. ter Stegen",  team:"Barcelona",    pos:"POR", val:10, pts:76,  competition:"bundesliga", emoji:"🧤"},
+  {id:62, name:"J. Kimmich",     team:"B. München",   pos:"DEF", val:13, pts:84,  competition:"bundesliga", emoji:"🛡️"},
+  {id:63, name:"D. Raum",        team:"Leipzig",      pos:"DEF", val: 9, pts:69,  competition:"bundesliga", emoji:"🛡️"},
+  {id:64, name:"M. Hummels",     team:"Dortmund",     pos:"DEF", val: 8, pts:66,  competition:"bundesliga", emoji:"🛡️"},
+  {id:65, name:"L. Goretzka",    team:"B. München",   pos:"MED", val:11, pts:79,  competition:"bundesliga", emoji:"⚡"},
+  {id:66, name:"F. Wirtz",       team:"Leverkusen",   pos:"MED", val:18, pts:95,  competition:"bundesliga", emoji:"⚡"},
+  {id:67, name:"G. Xhaka",       team:"Leverkusen",   pos:"MED", val:12, pts:80,  competition:"bundesliga", emoji:"⚡"},
+  {id:68, name:"S. Gnabry",      team:"B. München",   pos:"DEL", val:13, pts:82,  competition:"bundesliga", emoji:"🔥"},
+  {id:69, name:"V. Boniface",    team:"Leverkusen",   pos:"DEL", val:15, pts:87,  competition:"bundesliga", emoji:"🔥"},
+  {id:70, name:"H. Füllkrug",    team:"Dortmund",     pos:"DEL", val:12, pts:78,  competition:"bundesliga", emoji:"🔥"},
+  {id:71, name:"J. Beier",       team:"Hoffenheim",   pos:"DEL", val:11, pts:74,  competition:"bundesliga", emoji:"🔥"},
+  // ── Serie A ───────────────────────────────────────────
+  {id:80, name:"G. Donnarumma",  team:"PSG/Italia",   pos:"POR", val:11, pts:78,  competition:"seriea",     emoji:"🧤"},
+  {id:81, name:"M. Maignan",     team:"AC Milan",     pos:"POR", val:10, pts:75,  competition:"seriea",     emoji:"🧤"},
+  {id:82, name:"G. Di Lorenzo",  team:"Napoli",       pos:"DEF", val:10, pts:73,  competition:"seriea",     emoji:"🛡️"},
+  {id:83, name:"A. Bastoni",     team:"Inter",        pos:"DEF", val:11, pts:77,  competition:"seriea",     emoji:"🛡️"},
+  {id:84, name:"F. Acerbi",      team:"Inter",        pos:"DEF", val: 8, pts:65,  competition:"seriea",     emoji:"🛡️"},
+  {id:85, name:"N. Barella",     team:"Inter",        pos:"MED", val:14, pts:83,  competition:"seriea",     emoji:"⚡"},
+  {id:86, name:"H. Calhanoglu",  team:"Inter",        pos:"MED", val:12, pts:80,  competition:"seriea",     emoji:"⚡"},
+  {id:87, name:"F. Chiesa",      team:"Juventus",     pos:"DEL", val:13, pts:79,  competition:"seriea",     emoji:"🔥"},
+  {id:88, name:"L. Martinez",    team:"Inter",        pos:"DEL", val:17, pts:91,  competition:"seriea",     emoji:"🔥"},
+  {id:89, name:"V. Osimhen",     team:"Napoli",       pos:"DEL", val:18, pts:93,  competition:"seriea",     emoji:"🔥"},
+  {id:90, name:"R. Leão",        team:"AC Milan",     pos:"DEL", val:16, pts:88,  competition:"seriea",     emoji:"🔥"},
+  {id:91, name:"P. Dybala",      team:"Roma",         pos:"DEL", val:14, pts:82,  competition:"seriea",     emoji:"🔥"},
+  // ── Ligue 1 ───────────────────────────────────────────
+  {id:100,name:"G. Donnarumma",  team:"PSG",          pos:"POR", val:12, pts:81,  competition:"ligue1",     emoji:"🧤"},
+  {id:101,name:"B. Samba",       team:"Lens",         pos:"POR", val: 8, pts:70,  competition:"ligue1",     emoji:"🧤"},
+  {id:102,name:"N. Mukiele",     team:"PSG",          pos:"DEF", val: 9, pts:68,  competition:"ligue1",     emoji:"🛡️"},
+  {id:103,name:"W. Saliba",      team:"Arsenal/Fr",   pos:"DEF", val:11, pts:76,  competition:"ligue1",     emoji:"🛡️"},
+  {id:104,name:"T. Hernández",   team:"AC Milan/Fr",  pos:"DEF", val:11, pts:74,  competition:"ligue1",     emoji:"🛡️"},
+  {id:105,name:"Vítinha",        team:"PSG",          pos:"MED", val:13, pts:80,  competition:"ligue1",     emoji:"⚡"},
+  {id:106,name:"W. Fofana",      team:"PSG",          pos:"MED", val:10, pts:72,  competition:"ligue1",     emoji:"⚡"},
+  {id:107,name:"K. Mbappé",      team:"PSG/France",   pos:"DEL", val:22, pts:99,  competition:"ligue1",     emoji:"🔥"},
+  {id:108,name:"O. Dembélé",     team:"PSG",          pos:"DEL", val:16, pts:87,  competition:"ligue1",     emoji:"🔥"},
+  {id:109,name:"M. Thuram",      team:"Inter/Fr",     pos:"DEL", val:14, pts:83,  competition:"ligue1",     emoji:"🔥"},
+  {id:110,name:"T. Weah",        team:"Juventus/Fr",  pos:"DEL", val:10, pts:68,  competition:"ligue1",     emoji:"🔥"},
+];
+
+export function getPlayer(id) {
+  return PLAYERS.find(p => p.id === id);
+}
+
+export function getByCompetition(competition) {
+  return PLAYERS.filter(p => p.competition === competition);
+}
