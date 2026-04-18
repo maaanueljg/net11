@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Net11 · Fantasy Fútbol</title>
+
+  <!-- PWA Meta -->
+  <meta name="theme-color" content="#00e676" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Net11" />
+  <meta name="description" content="Net11 - El mejor fantasy de fútbol. LaLiga, Premier y Champions." />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── RESET & VARS ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent:    #00e676;
+      --accent2:   #00b0ff;
+      --danger:    #ff1744;
+      --gold:      #ffd600;
+      --bg:        #080c10;
+      --bg2:       #0d1117;
+      --bg3:       #141c24;
+      --bg4:       #1c2733;
+      --border:    rgba(255,255,255,0.07);
+      --text:      #e8edf2;
+      --muted:     #5a6a7a;
+      --por:       #ffd600;
+      --def:       #00b0ff;
+      --med:       #00e676;
+      --del:       #ff1744;
+      --font-head: 'Anton', sans-serif;
+      --font-body: 'Outfit', sans-serif;
+      --r:         14px;
+      --r-sm:      8px;
+    }
+    html, body {
+      height: 100%; width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    /* ── LAYOUT ───────────────────────────────────────────── */
+    #app {
+      display: flex; flex-direction: column;
+      height: 100dvh; max-width: 480px;
+      margin: 0 auto; position: relative;
+      overflow: hidden;
+    }
+
+    /* ── HEADER ───────────────────────────────────────────── */
+    header {
+      flex-shrink: 0;
+      background: linear-gradient(160deg, #0d1a10 0%, #0a141e 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 18px 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 80% 0%, rgba(0,230,118,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .header-row {
+      display: flex; justify-content: space-between; align-items: flex-start;
+    }
+    .logo {
+      font-family: var(--font-head);
+      font-size: 32px; letter-spacing: 2px; line-height: 1;
+      color: #fff;
+    }
+    .logo span { color: var(--accent); }
+    .logo sub {
+      font-family: var(--font-body);
+      font-size: 10px; font-weight: 500;
+      color: var(--muted); letter-spacing: 3px;
+      display: block; margin-top: 2px;
+      text-transform: uppercase;
+    }
+    .budget-pill {
+      text-align: right;
+    }
+    .budget-pill .label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+    .budget-pill .amount {
+      font-family: var(--font-head); font-size: 26px; line-height: 1;
+      transition: color 0.3s;
+    }
+    .budget-pill .amount.low { color: var(--danger); }
+    .budget-pill .amount.ok  { color: var(--gold); }
+
+    .header-stats {
+      display: flex; gap: 8px; margin-top: 12px;
+    }
+    .stat-chip {
+      flex: 1; background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 7px 8px; text-align: center;
+    }
+    .stat-chip .val { font-weight: 700; font-size: 15px; color: #fff; }
+    .stat-chip .key { font-size: 9px; color: var(--muted); margin-top: 1px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* ── SCROLL CONTENT ───────────────────────────────────── */
+    #content {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 72px;
+    }
+    #content::-webkit-scrollbar { display: none; }
+
+    /* ── BOTTOM NAV ───────────────────────────────────────── */
+    nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 480px;
+      background: rgba(8,12,16,0.95);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding: 6px 0 max(10px, env(safe-area-inset-bottom));
+      z-index: 100;
+    }
+    .nav-btn {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; gap: 3px;
+      background: none; border: none; cursor: pointer;
+      padding: 4px 0; color: var(--muted);
+      transition: color 0.2s;
+    }
+    .nav-btn.active { color: var(--accent); }
+    .nav-btn .nav-icon { font-size: 22px; line-height: 1; }
+    .nav-btn .nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+    .nav-btn .nav-dot {
+      width: 4px; height: 4px; border-radius: 50%;
+      background: var(--accent);
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .nav-btn.active .nav-dot { opacity: 1; }
+
+    /* ── NOTIFICATION TOAST ───────────────────────────────── */
+    #toast {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
+      padding: 10px 22px; border-radius: 30px;
+      font-size: 13px; font-weight: 600;
+      backdrop-filter: blur(12px);
+      z-index: 999; white-space: nowrap;
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.success { background: rgba(0,230,118,0.18); border: 1px solid rgba(0,230,118,0.4); color: var(--accent); }
+    #toast.error   { background: rgba(255,23,68,0.18);  border: 1px solid rgba(255,23,68,0.4);  color: var(--danger); }
+    #toast.warn    { background: rgba(255,214,0,0.15);  border: 1px solid rgba(255,214,0,0.4);  color: var(--gold); }
+
+    /* ── SECTION TITLE ────────────────────────────────────── */
+    .sec-title {
+      font-family: var(--font-head); font-size: 20px; letter-spacing: 1.5px;
+      color: var(--text); padding: 16px 18px 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .sec-title span { color: var(--accent); }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  TAB: EQUIPO                                            */
+    /* ─────────────────────────────────────────────────────── */
+    .formation-bar {
+      display: flex; gap: 6px; padding: 0 18px 12px;
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .formation-bar::-webkit-scrollbar { display: none; }
+    .fmbtn {
+      padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border);
+      background: var(--bg3); color: var(--muted);
+      font-family: var(--font-body); font-size: 13px; font-weight: 600;
+      cursor: pointer; white-space: nowrap; transition: all 0.2s;
+    }
+    .fmbtn.active {
+      background: var(--accent); border-color: var(--accent);
+      color: var(--bg); box-shadow: 0 0 16px rgba(0,230,118,0.35);
+    }
+
+    /* Pitch */
+    .pitch-wrap {
+      margin: 0 16px 16px;
+      background:
+        linear-gradient(180deg, #0a2a14 0%, #082010 50%, #061a0c 100%);
+      border-radius: 18px;
+      border: 1px solid rgba(0,230,118,0.12);
+      position: relative; overflow: hidden;
+      padding: 18px 10px 14px;
+      box-shadow: 0 0 40px rgba(0,230,118,0.04) inset;
+    }
+    /* Field lines */
+    .pitch-wrap::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 20% at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 100%);
+      pointer-events: none;
+    }
+    .field-lines {
+      position: absolute; inset: 0; pointer-events: none;
+    }
+    .pitch-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(4, auto);
+      gap: 14px 2px;
+      position: relative;
+    }
+
+    /* Slot */
+    .slot {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 4px;
+      cursor: pointer;
+    }
+    .slot-circle {
+      width: 50px; height: 50px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; transition: all 0.2s;
+      position: relative;
+    }
+    .slot-circle.empty {
+      border: 2px dashed rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.03);
+      color: rgba(255,255,255,0.2);
+      font-size: 18px;
+    }
+    .slot-circle.empty:hover { border-color: rgba(255,255,255,0.3); }
+    .slot-circle.active-select {
+      border: 2px dashed var(--accent) !important;
+      background: rgba(0,230,118,0.08) !important;
+      animation: pulse-slot 1s infinite;
+    }
+    @keyframes pulse-slot {
+      0%,100% { box-shadow: 0 0 0 0 rgba(0,230,118,0.3); }
+      50%      { box-shadow: 0 0 0 6px rgba(0,230,118,0); }
+    }
+    .slot-circle.filled {
+      border: 2px solid;
+      box-shadow: 0 0 14px -2px currentColor;
+    }
+    .slot-name {
+      font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.8);
+      text-align: center; max-width: 54px; line-height: 1.2;
+      letter-spacing: 0.3px;
+    }
+    .slot-pts {
+      font-size: 9px; font-weight: 700;
+    }
+
+    /* Plantilla list */
+    .plantilla { padding: 0 16px; }
+    .plantilla-empty {
+      text-align: center; color: var(--muted);
+      padding: 28px; font-size: 13px; line-height: 1.6;
+      background: var(--bg3); border-radius: var(--r);
+      border: 1px dashed var(--border);
+    }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  PLAYER CARD                                            */
+    /* ─────────────────────────────────────────────────────── */
+    .player-card {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--r); padding: 11px 13px;
+      margin-bottom: 8px; transition: all 0.18s;
+      position: relative; overflow: hidden;
+    }
+    .player-card::before {
+      content: '';
+      position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+      border-radius: 3px 0 0 3px;
+    }
+    .player-card.por::before { background: var(--por); }
+    .player-card.def::before { background: var(--def); }
+    .player-card.med::before { background: var(--med); }
+    .player-card.del::before { background: var(--del); }
+    .player-card.dim { opacity: 0.42; }
+
+    .pc-emoji { font-size: 24px; }
+    .pc-info { flex: 1; min-width: 0; }
+    .pc-name { font-weight: 600; font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pc-team { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .pc-badge {
+      font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+    .pc-badge.por { background: rgba(255,214,0,0.15);  color: var(--por); }
+    .pc-badge.def { background: rgba(0,176,255,0.15);  color: var(--def); }
+    .pc-badge.med { background: rgba(0,230,118,0.15);  color: var(--med); }
+    .pc-badge.del { background: rgba(255,23,68,0.15);  color: var(--del); }
+    .pc-pts { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .pc-right { text-align: right; }
+    .pc-value { font-family: var(--font-head); font-size: 17px; color: var(--gold); line-height: 1; }
+    .pc-btn {
+      margin-top: 5px; padding: 4px 10px; border-radius: 6px;
+      font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid;
+      font-family: var(--font-body); transition: all 0.18s;
+    }
+    .pc-btn.buy  { background: rgba(0,230,118,0.12); border-color: rgba(0,230,118,0.3); color: var(--accent); }
+    .pc-btn.sell { background: rgba(255,23,68,0.12);  border-color: rgba(255,23,68,0.3);  color: var(--danger); }
+    .pc-btn:disabled { background: rgba(255,255,255,0.04); border-color: var(--border); color: var(--muted); cursor: not-allowed; }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  TAB: MERCADO                                           */
+    /* ─────────────────────────────────────────────────────── */
+    .market-filters { padding: 0 16px 10px; }
+    .search-box {
+      width: 100%; padding: 10px 14px; border-radius: 10px;
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--font-body); font-size: 13px;
+      margin-bottom: 10px; outline: none; transition: border-color 0.2s;
+    }
+    .search-box:focus { border-color: rgba(0,230,118,0.35); }
+    .filter-row { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 8px; scrollbar-width: none; }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .filter-chip {
+      padding: 5px 13px; border-radius: 16px; border: 1px solid var(--border);
+      background: var(--bg3); color: var(--muted);
+      font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      transition: all 0.18s;
+    }
+    .filter-chip.active-league { background: #ff1744; border-color: #ff1744; color: #fff; }
+    .filter-chip.active-por    { background: var(--por); border-color: var(--por); color: var(--bg); }
+    .filter-chip.active-def    { background: var(--def); border-color: var(--def); color: var(--bg); }
+    .filter-chip.active-med    { background: var(--med); border-color: var(--med); color: var(--bg); }
+    .filter-chip.active-del    { background: var(--del); border-color: var(--del); color: var(--bg); }
+    .filter-chip.active-all    { background: var(--bg4); border-color: rgba(255,255,255,0.2); color: #fff; }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  TAB: RANKING                                           */
+    /* ─────────────────────────────────────────────────────── */
+    .ranking-hero {
+      margin: 0 16px 14px;
+      background: linear-gradient(135deg, #0d1f10, #0a1820);
+      border: 1px solid rgba(0,230,118,0.15);
+      border-radius: var(--r); padding: 18px;
+      text-align: center; position: relative; overflow: hidden;
+    }
+    .ranking-hero::before {
+      content: '🏆';
+      position: absolute; font-size: 80px; opacity: 0.05;
+      right: -10px; top: 50%; transform: translateY(-50%);
+    }
+    .ranking-hero .rh-label { font-size: 11px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+    .ranking-hero .rh-pos { font-family: var(--font-head); font-size: 52px; color: var(--accent); line-height: 1; }
+    .ranking-hero .rh-pts { font-size: 14px; color: var(--text); margin-top: 4px; }
+
+    .rank-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; margin-bottom: 7px;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--r); transition: all 0.2s;
+    }
+    .rank-item.me {
+      background: linear-gradient(135deg, rgba(0,230,118,0.07), rgba(0,230,118,0.03));
+      border-color: rgba(0,230,118,0.25);
+    }
+    .rank-num {
+      font-family: var(--font-head); font-size: 22px;
+      width: 28px; text-align: center; flex-shrink: 0;
+    }
+    .rank-info { flex: 1; }
+    .rank-user { font-weight: 600; font-size: 14px; }
+    .rank-user.me-label { color: var(--accent); }
+    .rank-team { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .rank-pts { font-family: var(--font-head); font-size: 20px; color: var(--gold); }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  TAB: JORNADA                                           */
+    /* ─────────────────────────────────────────────────────── */
+    .jornada-header {
+      margin: 0 16px 14px;
+      background: linear-gradient(135deg, #0a1820, #0d1a10);
+      border: 1px solid var(--border); border-radius: var(--r);
+      padding: 16px 18px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .jornada-header .jh-info .jh-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .jornada-header .jh-info .jh-num { font-family: var(--font-head); font-size: 28px; color: #fff; line-height: 1; }
+    .jornada-header .jh-pts { text-align: right; }
+    .jornada-header .jh-pts .jh-total { font-family: var(--font-head); font-size: 36px; color: var(--accent); line-height: 1; }
+    .jornada-header .jh-pts .jh-sub { font-size: 10px; color: var(--muted); }
+    .pts-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 13px; margin-bottom: 8px;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--r);
+    }
+    .pts-bar .pb-emoji { font-size: 22px; }
+    .pts-bar .pb-info { flex: 1; }
+    .pts-bar .pb-name { font-weight: 600; font-size: 13px; }
+    .pts-bar .pb-track {
+      margin-top: 5px; height: 4px; background: var(--bg4);
+      border-radius: 2px; overflow: hidden;
+    }
+    .pts-bar .pb-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+    .pts-bar .pb-val {
+      font-family: var(--font-head); font-size: 22px;
+      min-width: 36px; text-align: right;
+    }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  INSTALL BANNER                                         */
+    /* ─────────────────────────────────────────────────────── */
+    #install-banner {
+      display: none;
+      position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%);
+      width: calc(100% - 32px); max-width: 448px;
+      background: linear-gradient(135deg, #0d2a18, #0a1e2a);
+      border: 1px solid rgba(0,230,118,0.3);
+      border-radius: var(--r); padding: 14px 16px;
+      z-index: 90;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    #install-banner.visible { display: flex; align-items: center; gap: 12px; }
+    .ib-text { flex: 1; }
+    .ib-text strong { display: block; font-size: 14px; color: #fff; }
+    .ib-text span { font-size: 12px; color: var(--muted); }
+    .ib-btn {
+      padding: 8px 16px; border-radius: 8px;
+      background: var(--accent); color: var(--bg);
+      border: none; font-weight: 700; font-size: 13px;
+      cursor: pointer; font-family: var(--font-body);
+    }
+    .ib-close {
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; font-size: 18px; padding: 0 4px;
+    }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  FIREBASE SETUP MODAL                                   */
+    /* ─────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px); z-index: 200;
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal-sheet {
+      background: var(--bg2); border-radius: 20px 20px 0 0;
+      border: 1px solid var(--border); border-bottom: none;
+      padding: 20px 20px max(20px, env(safe-area-inset-bottom));
+      width: 100%; max-width: 480px;
+      animation: slideUp 0.3s cubic-bezier(0.34,1.2,0.64,1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    .modal-handle {
+      width: 36px; height: 4px; background: var(--border);
+      border-radius: 2px; margin: 0 auto 18px;
+    }
+    .modal-title { font-family: var(--font-head); font-size: 22px; margin-bottom: 6px; }
+    .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
+    .fb-step {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 12px 14px; margin-bottom: 8px;
+    }
+    .fb-step .step-num {
+      font-family: var(--font-head); font-size: 11px; color: var(--accent);
+      letter-spacing: 1px; margin-bottom: 4px;
+    }
+    .fb-step .step-text { font-size: 13px; color: var(--text); line-height: 1.4; }
+    .fb-step code {
+      background: var(--bg); padding: 2px 6px; border-radius: 4px;
+      font-size: 12px; color: var(--gold);
+    }
+    .modal-close {
+      width: 100%; padding: 13px; border-radius: var(--r);
+      background: var(--accent); color: var(--bg);
+      border: none; font-weight: 700; font-size: 15px;
+      cursor: pointer; font-family: var(--font-body); margin-top: 10px;
+    }
+
+    /* Loading */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .fade-in { animation: fadeIn 0.35s ease forwards; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TOAST -->
+  <div id="toast"></div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-row">
+      <div class="logo">
+        NET<span>11</span>
+        <sub>Fantasy Fútbol</sub>
+      </div>
+      <div class="budget-pill">
+        <div class="label">Presupuesto</div>
+        <div class="amount ok" id="budget-display">100M€</div>
+      </div>
+    </div>
+    <div class="header-stats">
+      <div class="stat-chip">
+        <div class="val" id="stat-players">0/11</div>
+        <div class="key">Jugadores</div>
+      </div>
+      <div class="stat-chip">
+        <div class="val" id="stat-pts">0</div>
+        <div class="key">Puntos</div>
+      </div>
+      <div class="stat-chip">
+        <div class="val" id="stat-form">4-3-3</div>
+        <div class="key">Formación</div>
+      </div>
+      <div class="stat-chip">
+        <div class="val">J30</div>
+        <div class="key">Jornada</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <div id="content"></div>
+
+  <!-- BOTTOM NAV -->
+  <nav>
+    <button class="nav-btn active" data-tab="equipo" onclick="switchTab('equipo',this)">
+      <div class="nav-icon">👕</div>
+      <div class="nav-label">Equipo</div>
+      <div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" data-tab="mercado" onclick="switchTab('mercado',this)">
+      <div class="nav-icon">💰</div>
+      <div class="nav-label">Mercado</div>
+      <div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" data-tab="ranking" onclick="switchTab('ranking',this)">
+      <div class="nav-icon">🏆</div>
+      <div class="nav-label">Ranking</div>
+      <div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" data-tab="jornada" onclick="switchTab('jornada',this)">
+      <div class="nav-icon">📅</div>
+      <div class="nav-label">Jornada</div>
+      <div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" data-tab="firebase" onclick="showFirebaseModal()">
+      <div class="nav-icon">🔥</div>
+      <div class="nav-label">Firebase</div>
+      <div class="nav-dot"></div>
+    </button>
+  </nav>
+
+</div>
+
+<!-- INSTALL BANNER -->
+<div id="install-banner">
+  <div class="ib-text">
+    <strong>📲 Instalar Net11</strong>
+    <span>Añade la app a tu pantalla de inicio</span>
+  </div>
+  <button class="ib-btn" onclick="installPWA()">Instalar</button>
+  <button class="ib-close" onclick="document.getElementById('install-banner').classList.remove('visible')">✕</button>
+</div>
+
+<!-- FIREBASE MODAL -->
+<div class="modal-overlay hidden" id="firebase-modal" onclick="closeFirebaseModal(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔥 Conectar Firebase</div>
+    <div class="modal-sub">Sigue estos pasos para activar el multijugador en tiempo real y guardar datos en la nube.</div>
+
+    <div class="fb-step">
+      <div class="step-num">PASO 1</div>
+      <div class="step-text">Ve a <strong>console.firebase.google.com</strong> → Crea un proyecto → Activa <strong>Firestore Database</strong> y <strong>Authentication</strong> (email/contraseña).</div>
+    </div>
+    <div class="fb-step">
+      <div class="step-num">PASO 2</div>
+      <div class="step-text">En Configuración del proyecto → Añade una app web → Copia el objeto <code>firebaseConfig</code>.</div>
+    </div>
+    <div class="fb-step">
+      <div class="step-num">PASO 3</div>
+      <div class="step-text">Abre <code>firebase.js</code> del proyecto y pega tu config. Ya está: usuarios, ligas privadas y puntuaciones en tiempo real funcionarán automáticamente.</div>
+    </div>
+    <div class="fb-step">
+      <div class="step-num">PASO 4 · DEPLOY GRATIS</div>
+      <div class="step-text">Ejecuta <code>firebase init hosting</code> + <code>firebase deploy</code>. Tu app estará en <code>tuapp.web.app</code> y cualquiera podrá instalarla.</div>
+    </div>
+
+    <button class="modal-close" onclick="closeFirebaseModal()">Entendido ✓</button>
+  </div>
+</div>
+
+<script type="module">
+/* ══════════════════════════════════════════════════════════════
+   FIREBASE
+══════════════════════════════════════════════════════════════ */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc }
+  from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyA-7gmBuFQOz6zaOVT0ZzKeEhEawvmjISA",
+  authDomain:        "net11-1fc08.firebaseapp.com",
+  projectId:         "net11-1fc08",
+  storageBucket:     "net11-1fc08.firebasestorage.app",
+  messagingSenderId: "162439869863",
+  appId:             "1:162439869863:web:45b2a9b3c8a5a68dc37282",
+  measurementId:     "G-QFKJEKEW8S"
+};
+
+const fbApp  = initializeApp(firebaseConfig);
+const fbDb   = getFirestore(fbApp);
+const fbAuth = getAuth(fbApp);
+let fbUser   = null;
+let cloudReady = false;
+
+/* ══════════════════════════════════════════════════════════════
+   DATA
+══════════════════════════════════════════════════════════════ */
+const PLAYERS = [
+  // LaLiga
+  {id:1,  name:"T. Courtois",   team:"Real Madrid",  pos:"POR", val:12, pts:87, league:"laliga",   emoji:"🧤"},
+  {id:2,  name:"M. Oblak",      team:"Atlético",     pos:"POR", val:11, pts:79, league:"laliga",   emoji:"🧤"},
+  {id:3,  name:"I. Peña",       team:"Barcelona",    pos:"POR", val: 7, pts:65, league:"laliga",   emoji:"🧤"},
+  {id:4,  name:"D. Carvajal",   team:"Real Madrid",  pos:"DEF", val:10, pts:74, league:"laliga",   emoji:"🛡️"},
+  {id:5,  name:"F. Mendy",      team:"Real Madrid",  pos:"DEF", val: 8, pts:68, league:"laliga",   emoji:"🛡️"},
+  {id:6,  name:"J. Gayà",       team:"Valencia",     pos:"DEF", val: 7, pts:61, league:"laliga",   emoji:"🛡️"},
+  {id:7,  name:"R. Le Normand", team:"Atlético",     pos:"DEF", val: 9, pts:70, league:"laliga",   emoji:"🛡️"},
+  {id:8,  name:"Pedri",         team:"Barcelona",    pos:"MED", val:14, pts:88, league:"laliga",   emoji:"⚡"},
+  {id:9,  name:"F. Valverde",   team:"Real Madrid",  pos:"MED", val:13, pts:85, league:"laliga",   emoji:"⚡"},
+  {id:10, name:"T. Kroos",      team:"Real Madrid",  pos:"MED", val:12, pts:82, league:"laliga",   emoji:"⚡"},
+  {id:11, name:"Gavi",          team:"Barcelona",    pos:"MED", val:11, pts:78, league:"laliga",   emoji:"⚡"},
+  {id:12, name:"Vinicius Jr",   team:"Real Madrid",  pos:"DEL", val:20, pts:98, league:"laliga",   emoji:"🔥"},
+  {id:13, name:"R. Lewandowski",team:"Barcelona",    pos:"DEL", val:18, pts:94, league:"laliga",   emoji:"🔥"},
+  {id:14, name:"Bellingham",    team:"Real Madrid",  pos:"DEL", val:19, pts:96, league:"laliga",   emoji:"🔥"},
+  {id:15, name:"A. Griezmann",  team:"Atlético",     pos:"DEL", val:15, pts:89, league:"laliga",   emoji:"🔥"},
+  {id:16, name:"Rodrygo",       team:"Real Madrid",  pos:"DEL", val:14, pts:84, league:"laliga",   emoji:"🔥"},
+  {id:17, name:"A. Yamal",      team:"Barcelona",    pos:"DEL", val:17, pts:92, league:"laliga",   emoji:"🔥"},
+  // Premier
+  {id:20, name:"A. Raya",       team:"Arsenal",      pos:"POR", val:10, pts:80, league:"premier",  emoji:"🧤"},
+  {id:21, name:"E. Martínez",   team:"Aston Villa",  pos:"POR", val:11, pts:82, league:"premier",  emoji:"🧤"},
+  {id:22, name:"A. Arnold",     team:"Liverpool",    pos:"DEF", val:13, pts:86, league:"premier",  emoji:"🛡️"},
+  {id:23, name:"K. Walker",     team:"Man City",     pos:"DEF", val:10, pts:74, league:"premier",  emoji:"🛡️"},
+  {id:24, name:"B. White",      team:"Arsenal",      pos:"DEF", val: 9, pts:72, league:"premier",  emoji:"🛡️"},
+  {id:25, name:"M. Salah",      team:"Liverpool",    pos:"DEL", val:20, pts:99, league:"premier",  emoji:"🔥"},
+  {id:26, name:"E. Haaland",    team:"Man City",     pos:"DEL", val:22, pts:101,league:"premier",  emoji:"🔥"},
+  {id:27, name:"B. Saka",       team:"Arsenal",      pos:"DEL", val:18, pts:93, league:"premier",  emoji:"🔥"},
+  {id:28, name:"P. Foden",      team:"Man City",     pos:"MED", val:16, pts:90, league:"premier",  emoji:"⚡"},
+  {id:29, name:"M. De Bruyne",  team:"Man City",     pos:"MED", val:17, pts:88, league:"premier",  emoji:"⚡"},
+  {id:30, name:"D. Rice",       team:"Arsenal",      pos:"MED", val:14, pts:83, league:"premier",  emoji:"⚡"},
+  {id:31, name:"C. Palmer",     team:"Chelsea",      pos:"MED", val:16, pts:89, league:"premier",  emoji:"⚡"},
+  {id:32, name:"O. Watkins",    team:"Aston Villa",  pos:"DEL", val:14, pts:85, league:"premier",  emoji:"🔥"},
+  {id:33, name:"Son H-M",       team:"Tottenham",    pos:"DEL", val:14, pts:82, league:"premier",  emoji:"🔥"},
+  // Champions
+  {id:40, name:"G. Donnarumma", team:"PSG",          pos:"POR", val:12, pts:84, league:"champions",emoji:"🧤"},
+  {id:41, name:"M. Neuer",      team:"Bayern",       pos:"POR", val:10, pts:75, league:"champions",emoji:"🧤"},
+  {id:42, name:"T. Hernández",  team:"Bayern",       pos:"DEF", val:11, pts:78, league:"champions",emoji:"🛡️"},
+  {id:43, name:"R. Hakimi",     team:"PSG",          pos:"DEF", val:12, pts:80, league:"champions",emoji:"🛡️"},
+  {id:44, name:"A. Davies",     team:"Bayern",       pos:"DEF", val:10, pts:74, league:"champions",emoji:"🛡️"},
+  {id:45, name:"K. Mbappé",     team:"Real Madrid",  pos:"DEL", val:22, pts:97, league:"champions",emoji:"🔥"},
+  {id:46, name:"H. Kane",       team:"Bayern",       pos:"DEL", val:19, pts:95, league:"champions",emoji:"🔥"},
+  {id:47, name:"V. Osimhen",    team:"Galatasaray",  pos:"DEL", val:16, pts:88, league:"champions",emoji:"🔥"},
+  {id:48, name:"J. Musiala",    team:"Bayern",       pos:"MED", val:15, pts:86, league:"champions",emoji:"⚡"},
+  {id:49, name:"N. Barella",    team:"Inter",        pos:"MED", val:13, pts:82, league:"champions",emoji:"⚡"},
+  {id:50, name:"Vítinha",       team:"PSG",          pos:"MED", val:13, pts:81, league:"champions",emoji:"⚡"},
+];
+
+const FORMATIONS = {
+  "4-3-3": [
+    {pos:"POR",r:1,c:3},
+    {pos:"DEF",r:2,c:1},{pos:"DEF",r:2,c:2},{pos:"DEF",r:2,c:4},{pos:"DEF",r:2,c:5},
+    {pos:"MED",r:3,c:2},{pos:"MED",r:3,c:3},{pos:"MED",r:3,c:4},
+    {pos:"DEL",r:4,c:1},{pos:"DEL",r:4,c:3},{pos:"DEL",r:4,c:5},
+  ],
+  "4-4-2": [
+    {pos:"POR",r:1,c:3},
+    {pos:"DEF",r:2,c:1},{pos:"DEF",r:2,c:2},{pos:"DEF",r:2,c:4},{pos:"DEF",r:2,c:5},
+    {pos:"MED",r:3,c:1},{pos:"MED",r:3,c:2},{pos:"MED",r:3,c:4},{pos:"MED",r:3,c:5},
+    {pos:"DEL",r:4,c:2},{pos:"DEL",r:4,c:4},
+  ],
+  "3-5-2": [
+    {pos:"POR",r:1,c:3},
+    {pos:"DEF",r:2,c:2},{pos:"DEF",r:2,c:3},{pos:"DEF",r:2,c:4},
+    {pos:"MED",r:3,c:1},{pos:"MED",r:3,c:2},{pos:"MED",r:3,c:3},{pos:"MED",r:3,c:4},{pos:"MED",r:3,c:5},
+    {pos:"DEL",r:4,c:2},{pos:"DEL",r:4,c:4},
+  ],
+};
+
+const RANKING_DATA = [
+  {user:"ElMister99",    team:"Los Galácticos", pts:1842},
+  {user:"FantasyKing",   team:"Dream XI",       pts:1790},
+  {user:"TuEquipo",      team:"Net11 FC",       pts:1750, me:true},
+  {user:"GoldenBoot",    team:"Striker FC",     pts:1701},
+  {user:"TikiTaka",      team:"Pep's Boys",     pts:1655},
+  {user:"LaCatenaccio",  team:"Difensa",        pts:1620},
+  {user:"PressureFCB",   team:"Gegenpresse",    pts:1589},
+];
+
+/* ══════════════════════════════════════════════════════════════
+   STATE  (persisted in localStorage)
+══════════════════════════════════════════════════════════════ */
+let state = {
+  budget: 100,
+  formation: "4-3-3",
+  team: Array(11).fill(null),  // player ids or null
+};
+
+let saveState = function() {
+  localStorage.setItem('net11_state', JSON.stringify(state));
+};
+function loadState() {
+  try {
+    const s = localStorage.getItem('net11_state');
+    if (s) state = JSON.parse(s);
+  } catch(e) {}
+}
+loadState();
+
+function getPlayer(id) { return PLAYERS.find(p => p.id === id); }
+function teamPlayers() { return state.team.map(id => id ? getPlayer(id) : null); }
+function teamIds()     { return new Set(state.team.filter(Boolean)); }
+function teamPts()     { return teamPlayers().filter(Boolean).reduce((s,p) => s+p.pts, 0); }
+function teamCount()   { return state.team.filter(Boolean).length; }
+
+/* ══════════════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════════════ */
+let toastTimer;
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HEADER UPDATE
+══════════════════════════════════════════════════════════════ */
+function updateHeader() {
+  const b = state.budget;
+  const el = document.getElementById('budget-display');
+  el.textContent = b.toFixed(1) + 'M€';
+  el.className = 'amount ' + (b < 10 ? 'low' : 'ok');
+  document.getElementById('stat-players').textContent = teamCount() + '/11';
+  document.getElementById('stat-pts').textContent = teamPts();
+  document.getElementById('stat-form').textContent = state.formation;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TAB SWITCHING
+══════════════════════════════════════════════════════════════ */
+let currentTab = 'equipo';
+function switchTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderTab();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RENDER ROUTER
+══════════════════════════════════════════════════════════════ */
+function renderTab() {
+  const c = document.getElementById('content');
+  c.innerHTML = '';
+  updateHeader();
+  const wrap = document.createElement('div');
+  wrap.className = 'fade-in';
+  if (currentTab === 'equipo')   renderEquipo(wrap);
+  else if (currentTab === 'mercado') renderMercado(wrap);
+  else if (currentTab === 'ranking') renderRanking(wrap);
+  else if (currentTab === 'jornada') renderJornada(wrap);
+  c.appendChild(wrap);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   EQUIPO
+══════════════════════════════════════════════════════════════ */
+let activeSlot = null; // {pos, idx}
+
+function renderEquipo(wrap) {
+  // Formation bar
+  const fbar = document.createElement('div');
+  fbar.innerHTML = `<div class="sec-title">👕 MI <span>EQUIPO</span></div>`;
+  const bar = document.createElement('div');
+  bar.className = 'formation-bar';
+  Object.keys(FORMATIONS).forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = 'fmbtn' + (state.formation === f ? ' active' : '');
+    btn.textContent = f;
+    btn.onclick = () => {
+      state.formation = f;
+      state.team = Array(11).fill(null);
+      activeSlot = null;
+      saveState();
+      renderTab();
+    };
+    bar.appendChild(btn);
+  });
+  wrap.appendChild(fbar);
+  wrap.appendChild(bar);
+
+  // Pitch
+  const pitchWrap = document.createElement('div');
+  pitchWrap.className = 'pitch-wrap';
+
+  // SVG field lines
+  pitchWrap.innerHTML = `
+    <svg class="field-lines" viewBox="0 0 300 220" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;opacity:0.07">
+      <rect x="30" y="10" width="240" height="200" rx="2" fill="none" stroke="white" stroke-width="1"/>
+      <line x1="30" y1="110" x2="270" y2="110" stroke="white" stroke-width="1"/>
+      <circle cx="150" cy="110" r="28" fill="none" stroke="white" stroke-width="1"/>
+      <rect x="100" y="10" width="100" height="30" fill="none" stroke="white" stroke-width="1"/>
+      <rect x="100" y="180" width="100" height="30" fill="none" stroke="white" stroke-width="1"/>
+      <rect x="70" y="10" width="160" height="55" fill="none" stroke="white" stroke-width="0.7"/>
+      <rect x="70" y="155" width="160" height="55" fill="none" stroke="white" stroke-width="0.7"/>
+    </svg>`;
+
+  const grid = document.createElement('div');
+  grid.className = 'pitch-grid';
+
+  const slots = FORMATIONS[state.formation];
+  slots.forEach((slot, idx) => {
+    const player = state.team[idx] ? getPlayer(state.team[idx]) : null;
+    const posColor = {POR:'var(--por)',DEF:'var(--def)',MED:'var(--med)',DEL:'var(--del)'}[slot.pos];
+
+    const slotEl = document.createElement('div');
+    slotEl.className = 'slot';
+    slotEl.style.gridColumn = slot.c;
+    slotEl.style.gridRow = slot.r;
+
+    if (player) {
+      slotEl.innerHTML = `
+        <div class="slot-circle filled" style="color:${posColor};border-color:${posColor};background:${posColor}15;box-shadow:0 0 14px ${posColor}33">
+          ${player.emoji}
+        </div>
+        <div class="slot-name">${player.name.split(' ').pop()}</div>
+        <div class="slot-pts" style="color:${posColor}">${player.pts}p</div>`;
+      slotEl.onclick = () => {
+        removeFromTeam(idx);
+      };
+    } else {
+      const isActive = activeSlot && activeSlot.idx === idx;
+      slotEl.innerHTML = `
+        <div class="slot-circle empty ${isActive ? 'active-select' : ''}" style="${isActive ? `border-color:var(--accent);color:var(--accent)` : ''}">
+          ${isActive ? '★' : '+'}
+        </div>
+        <div class="slot-name" style="color:${posColor}88">${slot.pos}</div>`;
+      slotEl.onclick = () => {
+        activeSlot = { pos: slot.pos, idx };
+        renderTab();
+        switchTab('mercado', document.querySelector('[data-tab="mercado"]'));
+        showToast(`Selecciona un ${slot.pos} en el mercado`, 'warn');
+      };
+    }
+    grid.appendChild(slotEl);
+  });
+
+  pitchWrap.appendChild(grid);
+  wrap.appendChild(pitchWrap);
+
+  // Plantilla list
+  const plantTitle = document.createElement('div');
+  plantTitle.className = 'sec-title';
+  plantTitle.innerHTML = '📋 PLANTILLA <span>COMPLETA</span>';
+  wrap.appendChild(plantTitle);
+
+  const plantilla = document.createElement('div');
+  plantilla.className = 'plantilla';
+
+  const players = teamPlayers().filter(Boolean);
+  if (players.length === 0) {
+    plantilla.innerHTML = `<div class="plantilla-empty">Toca un hueco en el campo<br>o ve al <strong>Mercado</strong> para fichar jugadores.<br><br>💡 Presupuesto: <strong>${state.budget}M€</strong></div>`;
+  } else {
+    players.forEach(p => {
+      const idx = state.team.indexOf(p.id);
+      plantilla.appendChild(buildPlayerCard(p, true, idx));
+    });
+  }
+  wrap.appendChild(plantilla);
+}
+
+function removeFromTeam(idx) {
+  const pid = state.team[idx];
+  if (!pid) return;
+  const p = getPlayer(pid);
+  state.team[idx] = null;
+  state.budget = +(state.budget + p.val).toFixed(1);
+  saveState();
+  showToast(`🔴 ${p.name} vendido · +${p.val}M€`, 'error');
+  renderTab();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PLAYER CARD BUILDER
+══════════════════════════════════════════════════════════════ */
+function buildPlayerCard(p, inTeam, teamIdx) {
+  const card = document.createElement('div');
+  card.className = `player-card ${p.pos.toLowerCase()}`;
+  const canBuy = !inTeam && state.budget >= p.val && !teamIds().has(p.id);
+
+  card.innerHTML = `
+    <div class="pc-emoji">${p.emoji}</div>
+    <div class="pc-info">
+      <div class="pc-name">${p.name}</div>
+      <div class="pc-team">${p.team} · ${leagueLabel(p.league)}</div>
+      <div style="margin-top:5px;display:flex;align-items:center;gap:6px">
+        <span class="pc-badge ${p.pos.toLowerCase()}">${p.pos}</span>
+        <span class="pc-pts">${p.pts} pts totales</span>
+      </div>
+    </div>
+    <div class="pc-right">
+      <div class="pc-value">${p.val}M</div>
+      ${inTeam
+        ? `<button class="pc-btn sell" onclick="removeFromTeam(${teamIdx})">Vender</button>`
+        : `<button class="pc-btn buy" ${canBuy?'':'disabled'} onclick="buyPlayer(${p.id})">${teamIds().has(p.id) ? 'En equipo' : canBuy ? 'Fichar' : state.budget < p.val ? 'Sin fondos' : 'Sin hueco'}</button>`
+      }
+    </div>`;
+
+  if (!inTeam && !canBuy) card.classList.add('dim');
+  return card;
+}
+
+function leagueLabel(l) {
+  return {laliga:'🇪🇸 LaLiga', premier:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier', champions:'⭐ Champions'}[l] || l;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BUY PLAYER
+══════════════════════════════════════════════════════════════ */
+function buyPlayer(pid) {
+  const p = getPlayer(pid);
+  if (!p) return;
+  if (teamIds().has(pid)) return showToast('Ya está en tu equipo', 'warn');
+  if (state.budget < p.val) return showToast('¡Sin presupuesto suficiente!', 'error');
+
+  const slots = FORMATIONS[state.formation];
+
+  // If activeSlot, use it
+  if (activeSlot) {
+    if (activeSlot.pos !== p.pos) return showToast(`Solo puedes poner un ${activeSlot.pos} ahí`, 'error');
+    state.team[activeSlot.idx] = pid;
+    state.budget = +(state.budget - p.val).toFixed(1);
+    activeSlot = null;
+    saveState();
+    showToast(`✅ ${p.name} fichado! -${p.val}M€`);
+    switchTab('equipo', document.querySelector('[data-tab="equipo"]'));
+    return;
+  }
+
+  // Find first empty matching slot
+  const idx = slots.findIndex((s, i) => s.pos === p.pos && !state.team[i]);
+  if (idx === -1) return showToast(`No hay hueco de ${p.pos} libre`, 'error');
+
+  state.team[idx] = pid;
+  state.budget = +(state.budget - p.val).toFixed(1);
+  saveState();
+  showToast(`✅ ${p.name} fichado! -${p.val}M€`);
+  renderTab();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MERCADO
+══════════════════════════════════════════════════════════════ */
+let filterLeague = 'all';
+let filterPos    = 'all';
+let searchQuery  = '';
+
+function renderMercado(wrap) {
+  const title = document.createElement('div');
+  title.className = 'sec-title';
+  title.innerHTML = activeSlot
+    ? `💰 FICHAJE <span>${activeSlot.pos}</span>`
+    : '💰 MERCADO <span>DE FICHAJES</span>';
+  wrap.appendChild(title);
+
+  const mf = document.createElement('div');
+  mf.className = 'market-filters';
+
+  // Search
+  const search = document.createElement('input');
+  search.type = 'text';
+  search.className = 'search-box';
+  search.placeholder = '🔍  Buscar jugador o equipo...';
+  search.value = searchQuery;
+  search.oninput = e => { searchQuery = e.target.value; updateMarketList(listWrap); };
+  mf.appendChild(search);
+
+  // League filter
+  const lrow = document.createElement('div');
+  lrow.className = 'filter-row';
+  [['all','Todas'],['laliga','🇪🇸 LaLiga'],['premier','🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier'],['champions','⭐ UCL']].forEach(([val, label]) => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-chip' + (filterLeague === val ? (val==='all'?' active-all':' active-league') : '');
+    btn.textContent = label;
+    btn.onclick = () => { filterLeague = val; mf.querySelectorAll('.filter-chip').forEach(b=>b.className='filter-chip'); btn.className='filter-chip '+(val==='all'?'active-all':'active-league'); updateMarketList(listWrap); };
+    lrow.appendChild(btn);
+  });
+  mf.appendChild(lrow);
+
+  // Pos filter
+  const prow = document.createElement('div');
+  prow.className = 'filter-row';
+  [['all','Todos'],['POR','POR'],['DEF','DEF'],['MED','MED'],['DEL','DEL']].forEach(([val, label]) => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-chip' + (filterPos === val ? (val==='all'?' active-all':` active-${val.toLowerCase()}`) : '');
+    btn.textContent = label;
+    btn.onclick = () => { filterPos = val; prow.querySelectorAll('.filter-chip').forEach(b=>b.className='filter-chip'); btn.className='filter-chip '+(val==='all'?'active-all':`active-${val.toLowerCase()}`); updateMarketList(listWrap); };
+    prow.appendChild(btn);
+  });
+  mf.appendChild(prow);
+  wrap.appendChild(mf);
+
+  const listWrap = document.createElement('div');
+  listWrap.style.padding = '0 16px';
+  wrap.appendChild(listWrap);
+  updateMarketList(listWrap);
+}
+
+function updateMarketList(listWrap) {
+  let filtered = PLAYERS.filter(p => {
+    if (filterLeague !== 'all' && p.league !== filterLeague) return false;
+    if (filterPos    !== 'all' && p.pos    !== filterPos)    return false;
+    if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !p.team.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (activeSlot && p.pos !== activeSlot.pos) return false;
+    return true;
+  }).sort((a,b) => b.pts - a.pts);
+
+  listWrap.innerHTML = '';
+  if (filtered.length === 0) {
+    listWrap.innerHTML = '<div class="plantilla-empty">No se encontraron jugadores</div>';
+    return;
+  }
+  filtered.forEach(p => listWrap.appendChild(buildPlayerCard(p, false, null)));
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RANKING
+══════════════════════════════════════════════════════════════ */
+function renderRanking(wrap) {
+  const myPos = RANKING_DATA.findIndex(r => r.me) + 1;
+  const myPts = RANKING_DATA.find(r => r.me)?.pts || 0;
+
+  wrap.innerHTML = `<div class="sec-title">🏆 <span>RANKING</span></div>`;
+
+  const hero = document.createElement('div');
+  hero.className = 'ranking-hero';
+  hero.innerHTML = `
+    <div class="rh-label">Tu posición</div>
+    <div class="rh-pos">#${myPos}</div>
+    <div class="rh-pts">${myPts.toLocaleString()} puntos · Net11 FC</div>`;
+  wrap.appendChild(hero);
+
+  const list = document.createElement('div');
+  list.style.padding = '0 16px';
+
+  RANKING_DATA.forEach((r, i) => {
+    const item = document.createElement('div');
+    item.className = 'rank-item' + (r.me ? ' me' : '');
+    const medal = ['🥇','🥈','🥉'][i] || (i+1);
+    item.innerHTML = `
+      <div class="rank-num" style="color:${i===0?'var(--gold)':i===1?'#aaa':i===2?'#cd7f32':'var(--muted)'}">${medal}</div>
+      <div class="rank-info">
+        <div class="rank-user ${r.me?'me-label':''}">${r.user}${r.me?' <small style="color:var(--muted);font-size:11px">(Tú)</small>':''}</div>
+        <div class="rank-team">${r.team}</div>
+      </div>
+      <div class="rank-pts">${r.pts.toLocaleString()}</div>`;
+    list.appendChild(item);
+  });
+
+  wrap.appendChild(list);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   JORNADA
+══════════════════════════════════════════════════════════════ */
+function renderJornada(wrap) {
+  const players = teamPlayers().filter(Boolean);
+  const jornPts = players.map(p => ({
+    p,
+    pts: Math.max(2, Math.floor(p.pts / 30 * (0.7 + Math.random() * 0.6)))
+  }));
+  const totalJorn = jornPts.reduce((s, x) => s + x.pts, 0);
+
+  wrap.innerHTML = `<div class="sec-title">📅 JORNADA <span>30</span></div>`;
+
+  const jh = document.createElement('div');
+  jh.className = 'jornada-header';
+  jh.innerHTML = `
+    <div class="jh-info">
+      <div class="jh-label">Temporada 24/25</div>
+      <div class="jh-num">Jornada 30</div>
+    </div>
+    <div class="jh-pts">
+      <div class="jh-total">${players.length ? totalJorn : '--'}</div>
+      <div class="jh-sub">puntos esta jornada</div>
+    </div>`;
+  wrap.appendChild(jh);
+
+  const list = document.createElement('div');
+  list.style.padding = '0 16px';
+
+  if (players.length === 0) {
+    list.innerHTML = '<div class="plantilla-empty">Ficha jugadores para ver sus puntuaciones por jornada.</div>';
+  } else {
+    const maxPts = Math.max(...jornPts.map(x => x.pts));
+    const posColor = {POR:'var(--por)',DEF:'var(--def)',MED:'var(--med)',DEL:'var(--del)'};
+    jornPts.sort((a,b) => b.pts - a.pts).forEach(({p, pts}) => {
+      const bar = document.createElement('div');
+      bar.className = 'pts-bar';
+      const pct = Math.round((pts / maxPts) * 100);
+      const col = posColor[p.pos];
+      bar.innerHTML = `
+        <div class="pb-emoji">${p.emoji}</div>
+        <div class="pb-info">
+          <div class="pb-name">${p.name}</div>
+          <div class="pb-track">
+            <div class="pb-fill" style="width:${pct}%;background:${col}"></div>
+          </div>
+        </div>
+        <div class="pb-val" style="color:${pts>=8?'var(--accent)':pts>=5?'var(--gold)':'var(--danger)'}">${pts}</div>`;
+      list.appendChild(bar);
+    });
+  }
+
+  wrap.appendChild(list);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FIREBASE MODAL
+══════════════════════════════════════════════════════════════ */
+function showFirebaseModal() {
+  document.getElementById('firebase-modal').classList.remove('hidden');
+}
+function closeFirebaseModal(e) {
+  if (!e || e.target === document.getElementById('firebase-modal')) {
+    document.getElementById('firebase-modal').classList.add('hidden');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PWA INSTALL
+══════════════════════════════════════════════════════════════ */
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-banner').classList.add('visible');
+});
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+      deferredPrompt = null;
+      document.getElementById('install-banner').classList.remove('visible');
+    });
+  }
+}
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner').classList.remove('visible');
+  showToast('🎉 Net11 instalada correctamente!');
+});
+
+/* ══════════════════════════════════════════════════════════════
+   CLOUD SYNC
+══════════════════════════════════════════════════════════════ */
+async function saveToCloud() {
+  if (!cloudReady || !fbUser) return;
+  try {
+    await setDoc(doc(fbDb, 'users', fbUser.uid), {
+      ...state,
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+    console.log('☁️ Equipo guardado en la nube');
+  } catch (err) {
+    console.warn('Error guardando en la nube:', err);
+  }
+}
+
+async function loadFromCloud() {
+  if (!fbUser) return null;
+  try {
+    const snap = await getDoc(doc(fbDb, 'users', fbUser.uid));
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data.team) {
+        state.team = data.team;
+        state.budget = data.budget ?? 100;
+        state.formation = data.formation ?? "4-3-3";
+        saveState();
+        return true;
+      }
+    }
+  } catch (err) {
+    console.warn('Error cargando desde la nube:', err);
+  }
+  return false;
+}
+
+// Debounced cloud save
+let cloudSaveTimer;
+const origSaveState = saveState;
+saveState = function() {
+  origSaveState();
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(saveToCloud, 1500);
+};
+
+// Initialize auth
+onAuthStateChanged(fbAuth, async (user) => {
+  if (user) {
+    fbUser = user;
+    cloudReady = true;
+    console.log('☁️ Conectado a la nube como:', user.uid.slice(0, 8));
+    showToast('☁️ Sincronización en la nube activa', 'success');
+    // Try loading cloud state (merge with local)
+    const loaded = await loadFromCloud();
+    if (loaded) {
+      renderTab();
+    }
+  }
+});
+
+// Sign in anonymously (no registration needed)
+signInAnonymously(fbAuth).catch(err => {
+  console.warn('Auth anónimo no disponible:', err.code);
+  if (err.code === 'auth/admin-restricted-operation') {
+    showToast('⚠️ Activa Auth Anónimo en Firebase', 'warn');
+  }
+});
+
+/* ══════════════════════════════════════════════════════════════
+   SERVICE WORKER
+══════════════════════════════════════════════════════════════ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(() => console.log('Net11 SW registrado ✓'))
+      .catch(err => console.warn('SW error:', err));
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════════ */
+// Expose functions globally (needed because we use type="module")
+window.switchTab = switchTab;
+window.buyPlayer = buyPlayer;
+window.removeFromTeam = removeFromTeam;
+window.installPWA = installPWA;
+window.showFirebaseModal = showFirebaseModal;
+window.closeFirebaseModal = closeFirebaseModal;
+
+renderTab();
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+{
+  "name": "Net11 · Fantasy Fútbol",
+  "short_name": "Net11",
+  "description": "El mejor fantasy de fútbol. LaLiga, Premier y Champions League.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080c10",
+  "theme_color": "#00e676",
+  "orientation": "portrait",
+  "lang": "es",
+  "categories": ["sports", "games"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mi Equipo",
+      "short_name": "Equipo",
+      "url": "/?tab=equipo",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mercado",
+      "short_name": "Mercado",
+      "url": "/?tab=mercado",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
