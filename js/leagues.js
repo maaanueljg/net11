@@ -1,6 +1,6 @@
 import { db } from './firebase.js';
 import {
-  doc, setDoc, getDoc, updateDoc, arrayUnion,
+  doc, setDoc, getDoc, updateDoc, arrayUnion, runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 function generateCode() {
@@ -14,8 +14,9 @@ export function getShareLink(code) {
 }
 
 export async function createLeague(adminUid, adminTeamName, name, competition) {
-  const code = generateCode();
-  await setDoc(doc(db, 'leagues', code), {
+  let code;
+  let attempts = 0;
+  const data = {
     name,
     competition,
     adminUid,
@@ -23,7 +24,22 @@ export async function createLeague(adminUid, adminTeamName, name, competition) {
     memberNames:    { [adminUid]: adminTeamName },
     createdAt:      new Date().toISOString(),
     currentJornada: 1,
-  });
+  };
+  do {
+    code = generateCode();
+    const ref = doc(db, 'leagues', code);
+    try {
+      await runTransaction(db, async tx => {
+        const snap = await tx.get(ref);
+        if (snap.exists()) throw new Error('collision');
+        tx.set(ref, data);
+      });
+      break;
+    } catch (e) {
+      if (e.message !== 'collision') throw e;
+    }
+  } while (++attempts < 5);
+  if (attempts === 5) throw new Error('No se pudo generar un código único');
   return code;
 }
 
@@ -34,6 +50,7 @@ export async function getLeague(code) {
 }
 
 export async function joinLeague(code, uid, teamName) {
+  if (!uid || uid.includes('.')) throw new Error('UID inválido');
   const league = await getLeague(code);
   if (!league)                      throw new Error('Liga no encontrada');
   if (league.members.length >= 20)  throw new Error('La liga está llena (máx. 20)');
@@ -43,5 +60,9 @@ export async function joinLeague(code, uid, teamName) {
     members:                 arrayUnion(uid),
     [`memberNames.${uid}`]:  teamName,
   });
-  return { ...league, members: [...league.members, uid] };
+  return {
+    ...league,
+    members:     [...league.members, uid],
+    memberNames: { ...league.memberNames, [uid]: teamName },
+  };
 }

@@ -16,8 +16,15 @@ service cloud.firestore {
     match /leagues/{leagueCode} {
       allow read:   if request.auth != null;
       allow create: if request.auth != null;
-      allow update: if request.auth != null
-                    && request.auth.uid in resource.data.members;
+      // Existing members can update (admin edits); OR a new member can join if cap not reached
+      allow update: if request.auth != null && (
+        request.auth.uid in resource.data.members
+        || (
+          !(request.auth.uid in resource.data.members)
+          && resource.data.members.size() < 20
+          && request.resource.data.members.hasAll(resource.data.members)
+        )
+      );
     }
 
     match /jornadas/{jornadaId} {
