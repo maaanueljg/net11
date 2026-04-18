@@ -43,7 +43,7 @@ export function buildPlayerCard(p, inTeam, { onBuy, onSell, canBuy, alreadyOwned
   }
 
   card.innerHTML = `
-    <div class="pc-emoji">${p.emoji}</div>
+    <div class="pc-emoji"></div>
     <div class="pc-info">
       <div class="pc-name">${p.name}</div>
       <div class="pc-team">${p.team}</div>
@@ -57,6 +57,7 @@ export function buildPlayerCard(p, inTeam, { onBuy, onSell, canBuy, alreadyOwned
       ${btnHtml}
     </div>`;
 
+  card.querySelector('.pc-emoji').textContent = p.emoji;
   const btn = card.querySelector('button');
   if (!btn.disabled) {
     btn.addEventListener('click', e => {
