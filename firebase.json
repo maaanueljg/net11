@@ -1,15 +1,14 @@
 {
   "hosting": {
     "public": ".",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+    "ignore": ["firebase.json", ".firebaserc", "docs/**", "firestore.rules", "*.md"],
     "rewrites": [
+      { "source": "/join/**", "destination": "/index.html" }
+    ],
+    "headers": [
       {
-        "source": "**",
-        "destination": "/index.html"
+        "source": "**/*.js",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
       }
     ]
   }
