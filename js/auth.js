@@ -39,18 +39,20 @@ export async function getUserProfile(uid) {
 }
 
 export async function createUserProfile(uid, displayName, teamName) {
+  const now = new Date().toISOString();
   await setDoc(doc(db, 'users', uid), {
     displayName,
     teamName,
     leagues:   [],
-    updatedAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   });
   return { displayName, teamName, leagues: [] };
 }
 
 export async function addLeagueToProfile(uid, leagueCode) {
-  await updateDoc(doc(db, 'users', uid), {
+  await setDoc(doc(db, 'users', uid), {
     leagues:   arrayUnion(leagueCode),
     updatedAt: new Date().toISOString(),
-  });
+  }, { merge: true });
 }
