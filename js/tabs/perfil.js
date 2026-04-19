@@ -62,6 +62,7 @@ export function render(wrap, ctx) {
         window.NET11.ctx.teamState = await loadTeam(user.uid, code, newLeague.competition);
         showToast(`Liga activa: ${newLeague.name}`);
         window.NET11.refresh();
+        if (window.NET11.updateLigaNav) window.NET11.updateLigaNav();
       };
       leagueList.appendChild(item);
     });

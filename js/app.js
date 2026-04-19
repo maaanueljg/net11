@@ -113,6 +113,7 @@ document.getElementById('btn-onboarding-save').addEventListener('click', async (
     const profile = await createUserProfile(user.uid, user.displayName || user.email, name);
     window.NET11.ctx.profile = profile;
     hideOnboardingModal();
+    updateLigaNav();
     renderCurrentTab();
     showToast('¡Bienvenido a Net11! 🎉');
   } catch (err) {
