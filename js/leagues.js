@@ -1,6 +1,6 @@
 import { db } from './firebase.js';
 import {
-  doc, setDoc, getDoc, updateDoc, arrayUnion, runTransaction,
+  doc, setDoc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteField, runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 function generateCode() {
@@ -13,19 +13,44 @@ export function getShareLink(code) {
   return `${location.origin}/join/${code}`;
 }
 
-export async function createLeague(adminUid, adminTeamName, name, competition, scoringMode = 'base', newspaper = null) {
+export async function createLeague(
+  adminUid, adminTeamName, name, competition,
+  scoringMode = 'base', newspaper = null,
+  {
+    clauseMode      = 'moderado',
+    startingMoney   = 100,
+    moneyPerPoint   = 0,
+    jornadaBonus    = null,
+    formations      = ['4-3-3', '4-4-2', '4-2-3-1', '4-5-1', '3-5-2', '5-3-2', '3-4-3', '5-4-1'],
+    maxStolenPerTeam = null,
+    antiRobo        = false,
+    antiRoboFee     = 75,
+    antiRoboLimit   = null,
+  } = {}
+) {
   let code;
   let attempts = 0;
   const data = {
     name,
     competition,
     scoringMode,
-    newspaper:      newspaper || null,
+    newspaper:        newspaper || null,
     adminUid,
-    members:        [adminUid],
-    memberNames:    { [adminUid]: adminTeamName },
-    createdAt:      new Date().toISOString(),
-    currentJornada: 1,
+    members:          [adminUid],
+    memberNames:      { [adminUid]: adminTeamName },
+    createdAt:        new Date().toISOString(),
+    currentJornada:   1,
+    jornadasPublished: 0,
+    clauseMode,
+    startingMoney,
+    moneyPerPoint,
+    jornadaBonus,
+    formations,
+    marketOpen:       false,
+    maxStolenPerTeam,
+    antiRobo,
+    antiRoboFee,
+    antiRoboLimit,
   };
   do {
     code = generateCode();
@@ -67,4 +92,15 @@ export async function joinLeague(code, uid, teamName) {
     members:     [...league.members, uid],
     memberNames: { ...league.memberNames, [uid]: teamName },
   };
+}
+
+export async function updateLeague(code, fields) {
+  await updateDoc(doc(db, 'leagues', code.toUpperCase()), fields);
+}
+
+export async function kickMember(code, memberUid) {
+  await updateDoc(doc(db, 'leagues', code.toUpperCase()), {
+    members:                        arrayRemove(memberUid),
+    [`memberNames.${memberUid}`]:   deleteField(),
+  });
 }
