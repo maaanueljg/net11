@@ -332,8 +332,8 @@ function showCreateLeagueModal(ctx) {
       };
       overlay.remove();
       showToast(`✅ Liga "${name}" creada · Código: ${code}`);
-      if (window.NET11.updateLigaNav) window.NET11.updateLigaNav();
       window.NET11.refresh();
+      if (window.NET11.updateLigaNav) window.NET11.updateLigaNav();
     } catch (err) {
       overlay.querySelector('#cl-error').textContent = 'Error: ' + err.message;
     }
@@ -381,8 +381,8 @@ function showJoinLeagueModal(ctx) {
       };
       overlay.remove();
       showToast(`✅ Te uniste a "${league.name}"`);
-      if (window.NET11.updateLigaNav) window.NET11.updateLigaNav();
       window.NET11.refresh();
+      if (window.NET11.updateLigaNav) window.NET11.updateLigaNav();
     } catch (err) {
       errEl.textContent = err.message;
     }
