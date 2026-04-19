@@ -35,7 +35,7 @@ function renderCurrentTab() {
   if      (currentTab === 'equipo')  renderEquipo(wrap, ctx);
   else if (currentTab === 'mercado') renderMercado(wrap, ctx);
   else if (currentTab === 'ranking') { rankingUnsub = renderRanking(wrap, ctx); }
-  else if (currentTab === 'jornada') renderJornada(wrap, ctx);
+  else if (currentTab === 'jornada') renderJornada(wrap, ctx).catch(console.error);
   else if (currentTab === 'perfil')  renderPerfil(wrap, ctx);
 
   c.appendChild(wrap);
