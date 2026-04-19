@@ -12,6 +12,7 @@ const LOST_BALLS_THRESH = { POR: 12, DEF: 12, MED: 10, DEL: 8 };
  */
 export function calcPoints(s, pos, mode) {
   if (!s) return 0;
+  if (mode === 'puras') return 0;
   let pts = 0;
 
   // Picas (solo modo cronistas)
