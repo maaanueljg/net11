@@ -7,6 +7,7 @@ import { render as renderMercado } from './tabs/mercado.js';
 import { render as renderRanking } from './tabs/ranking.js';
 import { render as renderJornada } from './tabs/jornada.js';
 import { render as renderPerfil }  from './tabs/perfil.js';
+import { render as renderLiga }   from './tabs/liga.js';
 
 window.NET11 = {
   ctx: { user: null, profile: null, league: null, teamState: null },
@@ -19,10 +20,17 @@ window.NET11 = {
     if (btn) btn.classList.add('active');
     renderCurrentTab();
   },
+  updateLigaNav: () => updateLigaNav(),
 };
 
 let currentTab = 'equipo';
 let rankingUnsub = null;
+
+function updateLigaNav() {
+  const { user, league } = window.NET11.ctx;
+  const btn = document.getElementById('nav-liga');
+  if (btn) btn.style.display = (league && user && league.adminUid === user.uid) ? '' : 'none';
+}
 
 function renderCurrentTab() {
   if (rankingUnsub) { rankingUnsub(); rankingUnsub = null; }
@@ -37,6 +45,7 @@ function renderCurrentTab() {
   else if (currentTab === 'ranking') { rankingUnsub = renderRanking(wrap, ctx); }
   else if (currentTab === 'jornada') renderJornada(wrap, ctx).catch(console.error);
   else if (currentTab === 'perfil')  renderPerfil(wrap, ctx);
+  else if (currentTab === 'liga')    renderLiga(wrap, ctx).catch(console.error);
 
   c.appendChild(wrap);
 }
@@ -127,6 +136,7 @@ async function handleJoinFromUrl(code) {
     window.NET11.ctx.teamState = defaultTeamState(league.competition);
     window.history.replaceState({}, '', '/');
     showToast(`✅ Te uniste a "${league.name}"`);
+    updateLigaNav();
     renderCurrentTab();
   } catch (err) {
     showToast(err.message, 'error');
@@ -139,6 +149,7 @@ onAuthChange(async (user) => {
   if (!user) {
     window.NET11.ctx = { user: null, profile: null, league: null, teamState: null };
     showLoginModal();
+    updateLigaNav();
     renderCurrentTab();
     return;
   }
@@ -168,6 +179,7 @@ onAuthChange(async (user) => {
     return;
   }
 
+  updateLigaNav();
   renderCurrentTab();
   showToast('☁️ Sesión activa', 'success');
 });
