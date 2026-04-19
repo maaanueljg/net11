@@ -6,9 +6,10 @@ import {
   doc, setDoc, getDoc, collection, getDocs, arrayUnion,
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 import { PLAYERS } from './players.js';
+import { calcPoints } from './scoring.js';
 
 let currentJornada = 1;
-let jornadaPts = {};
+let jornadaData = {};
 
 async function getAdminUids() {
   try {
@@ -76,8 +77,8 @@ async function loadJornada(num) {
   document.getElementById('jornada-num').textContent = num;
   try {
     const snap = await getDoc(doc(db, 'jornadas', String(num)));
-    jornadaPts = snap.exists() ? (snap.data().players || {}) : {};
-  } catch { jornadaPts = {}; }
+    jornadaData = snap.exists() ? (snap.data().players || {}) : {};
+  } catch { jornadaData = {}; }
   renderPlayerTable();
 }
 
@@ -85,23 +86,71 @@ function renderPlayerTable() {
   const tbody = document.getElementById('players-tbody');
   tbody.innerHTML = '';
   PLAYERS.forEach(p => {
+    const s  = jornadaData[p.id] || {};
     const tr = document.createElement('tr');
-    const currentPts = jornadaPts[p.id] ?? p.pts;
     tr.innerHTML = `
-      <td>${p.emoji} ${p.name}</td>
-      <td>${p.team}</td>
+      <td style="white-space:nowrap">${p.emoji} ${p.name}</td>
       <td><span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.08)">${p.pos}</span></td>
-      <td><span style="font-size:10px;color:var(--muted)">${p.competition}</span></td>
-      <td><input type="number" min="0" max="50" value="${currentPts}"
-        style="width:60px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;
-               color:var(--text);padding:4px 6px;font-family:var(--font-body)"
-        onchange="updatePts(${p.id}, this.value)"></td>`;
+      <td><input type="number" min="0" max="20" value="${s.goals ?? 0}"            class="si" onchange="updateStat(${p.id},'goals',+this.value)"            style="width:44px"></td>
+      <td><input type="number" min="0" max="20" value="${s.assists ?? 0}"          class="si" onchange="updateStat(${p.id},'assists',+this.value)"          style="width:44px"></td>
+      <td><input type="number" min="0" max="20" value="${s.assistChance ?? 0}"     class="si" onchange="updateStat(${p.id},'assistChance',+this.value)"     style="width:44px"></td>
+      <td><input type="checkbox" ${s.cleanSheet ? 'checked' : ''}                             onchange="updateStat(${p.id},'cleanSheet',this.checked)"></td>
+      <td><input type="number" min="0" max="120" value="${s.minutesPlayed ?? 90}"  class="si" onchange="updateStat(${p.id},'minutesPlayed',+this.value)"    style="width:52px"></td>
+      ${p.pos === 'POR' ? `<td><input type="number" min="0" max="20" value="${s.penaltySaved ?? 0}" class="si" onchange="updateStat(${p.id},'penaltySaved',+this.value)" style="width:44px"></td>` : '<td style="color:var(--muted);text-align:center">—</td>'}
+      <td><input type="number" min="0" max="5"  value="${s.penaltyWon ?? 0}"       class="si" onchange="updateStat(${p.id},'penaltyWon',+this.value)"       style="width:44px"></td>
+      <td><input type="number" min="0" max="5"  value="${s.penaltyMissed ?? 0}"    class="si" onchange="updateStat(${p.id},'penaltyMissed',+this.value)"    style="width:44px"></td>
+      <td>
+        <select class="si" onchange="updateCard(${p.id},this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px;font-family:var(--font-body);font-size:12px">
+          <option value="none"         ${(!s.yellowCards && !s.doubleYellow && !s.redCard) ? 'selected':''}>—</option>
+          <option value="yellow"       ${(s.yellowCards===1 && !s.doubleYellow) ? 'selected':''}>🟨 Amarilla</option>
+          <option value="doubleYellow" ${s.doubleYellow ? 'selected':''}>🟨🟨 2ª Amarilla</option>
+          <option value="red"          ${s.redCard ? 'selected':''}>🟥 Roja directa</option>
+        </select>
+      </td>
+      <td><input type="number" min="0" max="20" value="${s.goalsAgainst ?? 0}"     class="si" onchange="updateStat(${p.id},'goalsAgainst',+this.value)"     style="width:44px"></td>
+      <td><input type="number" min="0" max="50" value="${s.positiveActions ?? 0}"  class="si" onchange="updateStat(${p.id},'positiveActions',+this.value)"  style="width:44px"></td>
+      <td><input type="number" min="0" max="50" value="${s.lostBalls ?? 0}"        class="si" onchange="updateStat(${p.id},'lostBalls',+this.value)"        style="width:44px"></td>
+      <td>
+        <select class="si" onchange="updateStat(${p.id},'picas',+this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px;font-family:var(--font-body);font-size:12px">
+          <option value="0" ${!s.picas ? 'selected':''}>—</option>
+          <option value="1" ${s.picas===1 ? 'selected':''}>♣ (1)</option>
+          <option value="2" ${s.picas===2 ? 'selected':''}>♣♣ (2)</option>
+          <option value="3" ${s.picas===3 ? 'selected':''}>♣♣♣ (3)</option>
+          <option value="4" ${s.picas===4 ? 'selected':''}>♣♣♣♣ (4)</option>
+        </select>
+      </td>
+      <td id="pts-preview-${p.id}" style="font-weight:700;color:var(--accent)">—</td>`;
     tbody.appendChild(tr);
+  });
+  refreshPtsPreview();
+}
+
+function refreshPtsPreview() {
+  PLAYERS.forEach(p => {
+    const el = document.getElementById(`pts-preview-${p.id}`);
+    if (!el) return;
+    const s   = jornadaData[p.id] || {};
+    const pts = calcPoints(s, p.pos, 'base');
+    el.textContent = pts;
+    el.style.color = pts > 0 ? 'var(--accent)' : pts < 0 ? 'var(--danger)' : 'var(--muted)';
   });
 }
 
-window.updatePts = (id, val) => {
-  jornadaPts[id] = parseInt(val, 10) || 0;
+window.updateStat = (id, field, val) => {
+  if (!jornadaData[id]) jornadaData[id] = {};
+  jornadaData[id][field] = val;
+  refreshPtsPreview();
+};
+
+window.updateCard = (id, val) => {
+  if (!jornadaData[id]) jornadaData[id] = {};
+  jornadaData[id].yellowCards  = 0;
+  jornadaData[id].doubleYellow = false;
+  jornadaData[id].redCard      = false;
+  if (val === 'yellow')       jornadaData[id].yellowCards  = 1;
+  if (val === 'doubleYellow') jornadaData[id].doubleYellow = true;
+  if (val === 'red')          jornadaData[id].redCard      = true;
+  refreshPtsPreview();
 };
 
 window.changeJornada = (delta) => {
@@ -117,21 +166,35 @@ window.publishJornada = async () => {
     await setDoc(doc(db, 'jornadas', String(currentJornada)), {
       published: true,
       date:      new Date().toISOString(),
-      players:   jornadaPts,
+      players:   jornadaData,
     });
 
-    const usersSnap = await getDocs(collection(db, 'users'));
+    const usersSnap   = await getDocs(collection(db, 'users'));
+    const leagueCache = {};
     let updated = 0;
+
     for (const userDoc of usersSnap.docs) {
-      const profile  = userDoc.data();
-      const leagues  = profile.leagues || [];
+      const profile = userDoc.data();
+      const leagues = profile.leagues || [];
       for (const leagueCode of leagues) {
         try {
+          if (!leagueCache[leagueCode]) {
+            const ls = await getDoc(doc(db, 'leagues', leagueCode));
+            leagueCache[leagueCode] = ls.exists() ? ls.data() : { scoringMode: 'base' };
+          }
+          const scoringMode = leagueCache[leagueCode].scoringMode || 'base';
+          if (scoringMode === 'puras') continue;
+
           const teamSnap = await getDoc(doc(db, 'users', userDoc.id, 'leagueTeams', leagueCode));
           if (!teamSnap.exists()) continue;
-          const teamData = teamSnap.data();
-          const team     = teamData.team || [];
-          const totalPts = team.filter(Boolean).reduce((sum, pid) => sum + (jornadaPts[pid] ?? 0), 0);
+          const team = teamSnap.data().team || [];
+
+          const totalPts = team.filter(Boolean).reduce((sum, pid) => {
+            const player = PLAYERS.find(p => p.id === pid);
+            if (!player) return sum;
+            return sum + calcPoints(jornadaData[pid] || {}, player.pos, scoringMode);
+          }, 0);
+
           await setDoc(
             doc(db, 'users', userDoc.id, 'leagueTeams', leagueCode),
             { totalPts },

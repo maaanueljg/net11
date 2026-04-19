@@ -35,6 +35,15 @@
       border:none; font-weight:700; cursor:pointer; font-family:var(--font-body);
       display:flex; align-items:center; gap:8px;
     }
+    .si {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      padding: 3px 4px;
+      font-family: var(--font-body);
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -55,14 +64,31 @@
       <span class="num" id="jornada-num">1</span>
       <button onclick="changeJornada(1)">▶</button>
     </div>
+    <div style="overflow-x:auto">
     <table>
       <thead>
         <tr>
-          <th>Jugador</th><th>Equipo</th><th>Pos</th><th>Comp.</th><th>Puntos</th>
+          <th>Jugador</th>
+          <th>Pos</th>
+          <th title="Goles">⚽</th>
+          <th title="Asistencias gol">🎯</th>
+          <th title="Asistencias ocasión">🎯oc</th>
+          <th title="Portería a cero">🧱</th>
+          <th title="Minutos">⏱</th>
+          <th title="Penalti parado">🧤P</th>
+          <th title="Penalti provocado">💥P</th>
+          <th title="Penalti fallado">❌P</th>
+          <th title="Tarjeta">Tarj.</th>
+          <th title="Goles recibidos">GR</th>
+          <th title="Acciones positivas">Acc+</th>
+          <th title="Balones perdidos">BP</th>
+          <th title="Picas cronistas">♣</th>
+          <th>Pts</th>
         </tr>
       </thead>
       <tbody id="players-tbody"></tbody>
     </table>
+    </div>
     <button id="btn-publish" onclick="publishJornada()">🚀 Publicar jornada</button>
   </div>
 
