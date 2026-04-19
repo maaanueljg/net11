@@ -1,6 +1,6 @@
 import { db } from './firebase.js';
 import {
-  doc, setDoc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteField, runTransaction,
+  doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteField, runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 function generateCode() {
@@ -95,10 +95,16 @@ export async function joinLeague(code, uid, teamName) {
 }
 
 export async function updateLeague(code, fields) {
+  if (!fields || typeof fields !== 'object' || Object.keys(fields).length === 0) {
+    throw new Error('updateLeague: fields must be a non-empty object');
+  }
   await updateDoc(doc(db, 'leagues', code.toUpperCase()), fields);
 }
 
 export async function kickMember(code, memberUid) {
+  const league = await getLeague(code);
+  if (!league) throw new Error('Liga no encontrada');
+  if (league.adminUid === memberUid) throw new Error('No se puede expulsar al administrador');
   await updateDoc(doc(db, 'leagues', code.toUpperCase()), {
     members:                        arrayRemove(memberUid),
     [`memberNames.${memberUid}`]:   deleteField(),
