@@ -13,12 +13,14 @@ export function getShareLink(code) {
   return `${location.origin}/join/${code}`;
 }
 
-export async function createLeague(adminUid, adminTeamName, name, competition) {
+export async function createLeague(adminUid, adminTeamName, name, competition, scoringMode = 'base', newspaper = null) {
   let code;
   let attempts = 0;
   const data = {
     name,
     competition,
+    scoringMode,
+    newspaper:      newspaper || null,
     adminUid,
     members:        [adminUid],
     memberNames:    { [adminUid]: adminTeamName },
