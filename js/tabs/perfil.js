@@ -118,6 +118,11 @@ function showCreateLeagueModal(ctx) {
       <input id="cl-name" type="text" class="search-box" placeholder="Nombre de la liga" maxlength="30" style="margin-bottom:10px">
       <div style="font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Competición</div>
       <div id="cl-comp-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px"></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Sistema de puntuación</div>
+      <div id="cl-mode-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px"></div>
+      <div id="cl-newspaper-wrap" style="display:none;margin-bottom:10px">
+        <input id="cl-newspaper" type="text" class="search-box" placeholder="Periódico fuente (ej: Marca, AS…)" maxlength="40">
+      </div>
       <div id="cl-error" style="color:var(--danger);font-size:12px;min-height:18px;margin-bottom:8px"></div>
       <div style="display:flex;gap:8px">
         <button id="cl-cancel" class="modal-close" style="flex:1;background:var(--bg4);color:var(--text)">Cancelar</button>
@@ -126,29 +131,61 @@ function showCreateLeagueModal(ctx) {
     </div>`;
 
   let selectedComp = null;
-  const grid = overlay.querySelector('#cl-comp-grid');
+  let selectedMode = 'base';
+
+  // Competición
+  const compGrid = overlay.querySelector('#cl-comp-grid');
   Object.values(COMPETITIONS).forEach(c => {
     const btn = document.createElement('button');
     btn.style.cssText = 'padding:10px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-family:var(--font-body);font-size:12px;font-weight:600;transition:all 0.18s';
     btn.textContent = c.label;
     btn.onclick = () => {
-      grid.querySelectorAll('button').forEach(b => { b.style.borderColor = 'var(--border)'; b.style.background = 'var(--bg3)'; });
+      compGrid.querySelectorAll('button').forEach(b => { b.style.borderColor = 'var(--border)'; b.style.background = 'var(--bg3)'; });
       btn.style.borderColor = 'var(--accent)';
       btn.style.background  = 'rgba(0,230,118,0.1)';
       selectedComp = c.key;
     };
-    grid.appendChild(btn);
+    compGrid.appendChild(btn);
+  });
+
+  // Modo de puntuación
+  const modeGrid = overlay.querySelector('#cl-mode-grid');
+  const MODES = [
+    { key: 'base',      label: '📊 Base' },
+    { key: 'cronistas', label: '📰 Cronistas' },
+    { key: 'puras',     label: '🔌 Puras' },
+  ];
+  const newspaperWrap = overlay.querySelector('#cl-newspaper-wrap');
+
+  MODES.forEach(m => {
+    const btn = document.createElement('button');
+    btn.style.cssText = 'padding:10px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-family:var(--font-body);font-size:12px;font-weight:600;transition:all 0.18s;text-align:center';
+    btn.textContent = m.label;
+    if (m.key === 'base') {
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.background  = 'rgba(0,230,118,0.1)';
+    }
+    btn.onclick = () => {
+      modeGrid.querySelectorAll('button').forEach(b => { b.style.borderColor = 'var(--border)'; b.style.background = 'var(--bg3)'; });
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.background  = 'rgba(0,230,118,0.1)';
+      selectedMode = m.key;
+      newspaperWrap.style.display = m.key === 'cronistas' ? 'block' : 'none';
+    };
+    modeGrid.appendChild(btn);
   });
 
   overlay.querySelector('#cl-cancel').onclick = () => overlay.remove();
   overlay.querySelector('#cl-save').onclick = async () => {
-    const name = overlay.querySelector('#cl-name').value.trim();
-    const errEl = overlay.querySelector('#cl-error');
+    const name      = overlay.querySelector('#cl-name').value.trim();
+    const newspaper = overlay.querySelector('#cl-newspaper').value.trim();
+    const errEl     = overlay.querySelector('#cl-error');
     if (!name)         { errEl.textContent = 'Introduce un nombre'; return; }
     if (!selectedComp) { errEl.textContent = 'Elige una competición'; return; }
+    if (selectedMode === 'cronistas' && !newspaper) { errEl.textContent = 'Introduce el periódico fuente'; return; }
     try {
       const { user, profile } = ctx;
-      const code   = await createLeague(user.uid, profile.teamName, name, selectedComp);
+      const code   = await createLeague(user.uid, profile.teamName, name, selectedComp, selectedMode, newspaper || null);
       const league = await getLeague(code);
       await addLeagueToProfile(user.uid, code);
       ctx.profile.leagues = [...(ctx.profile.leagues || []), code];
