@@ -1,7 +1,7 @@
 import { logout, addLeagueToProfile } from '../auth.js';
 import { createLeague, joinLeague, getLeague, getShareLink } from '../leagues.js';
 import { showToast } from '../ui.js';
-import { loadTeam } from '../state.js';
+import { loadTeam, saveTeam } from '../state.js';
 import { COMPETITIONS } from '../players.js';
 
 export function render(wrap, ctx) {
@@ -288,9 +288,11 @@ function showCreateLeagueModal(ctx) {
   overlay.querySelector('#cl-save').onclick = async () => {
     const name          = overlay.querySelector('#cl-name').value.trim();
     const newspaper     = overlay.querySelector('#cl-newspaper').value.trim();
-    const startingMoney = Number(overlay.querySelector('#cl-money').value) || 100;
+    const moneyRaw = overlay.querySelector('#cl-money').value.trim();
+    const startingMoney = moneyRaw !== '' ? Number(moneyRaw) : 100;
     const moneyPerPoint = Number(overlay.querySelector('#cl-mpp').value) || 0;
-    const jornadaBonus  = bonusCheck.checked ? (Number(overlay.querySelector('#cl-bonus-amount').value) || 0) : null;
+    const bonusAmount  = Number(overlay.querySelector('#cl-bonus-amount').value);
+    const jornadaBonus = bonusCheck.checked && bonusAmount > 0 ? bonusAmount : null;
     const maxStolenRaw  = overlay.querySelector('#cl-stolen').value.trim();
     const maxStolenPerTeam = maxStolenRaw ? Number(maxStolenRaw) : null;
     const antiRobo      = arCheck.checked;
@@ -303,6 +305,9 @@ function showCreateLeagueModal(ctx) {
     if (!selectedComp)                               { errEl.textContent = 'Elige una competición'; return; }
     if (selectedMode === 'cronistas' && !newspaper)  { errEl.textContent = 'Introduce el periódico fuente'; return; }
     if (selectedFormations.size === 0)               { errEl.textContent = 'Activa al menos una alineación'; return; }
+
+    const saveBtn = overlay.querySelector('#cl-save');
+    saveBtn.disabled = true;
 
     try {
       const { user, profile } = ctx;
@@ -325,17 +330,20 @@ function showCreateLeagueModal(ctx) {
       ctx.profile.leagues = [...(ctx.profile.leagues || []), code];
       window.NET11.ctx.profile   = ctx.profile;
       window.NET11.ctx.league    = league;
-      window.NET11.ctx.teamState = {
+      const initialTeamState = {
         budget: 100, formation: '4-3-3', team: Array(11).fill(null),
         totalPts: 0, competition: selectedComp,
         money: startingMoney, antiRoboUsed: 0, stolenThisWindow: 0,
       };
+      window.NET11.ctx.teamState = initialTeamState;
+      await saveTeam(user.uid, code, initialTeamState);
       overlay.remove();
       showToast(`✅ Liga "${name}" creada · Código: ${code}`);
       window.NET11.refresh();
       if (window.NET11.updateLigaNav) window.NET11.updateLigaNav();
     } catch (err) {
-      overlay.querySelector('#cl-error').textContent = 'Error: ' + err.message;
+      errEl.textContent = 'Error: ' + err.message;
+      saveBtn.disabled = false;
     }
   };
 
