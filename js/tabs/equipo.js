@@ -62,6 +62,7 @@ export function render(wrap, ctx) {
   const grid = document.createElement('div');
   grid.className = 'pitch-grid';
   const POS_COLOR = { POR:'var(--por)', DEF:'var(--def)', MED:'var(--med)', DEL:'var(--del)' };
+  const maxRow = Math.max(...slots.map(s => s.r));
 
   slots.forEach((slot, idx) => {
     const player   = team[idx] ? getPlayer(team[idx]) : null;
@@ -69,7 +70,7 @@ export function render(wrap, ctx) {
     const slotEl   = document.createElement('div');
     slotEl.className = 'slot';
     slotEl.style.gridColumn = slot.c;
-    slotEl.style.gridRow    = slot.r;
+    slotEl.style.gridRow    = (maxRow + 1) - slot.r;
 
     if (player) {
       slotEl.innerHTML = `
