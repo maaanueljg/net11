@@ -114,7 +114,7 @@ export function render(wrap, ctx) {
 
   if (activePlayers.length === 0) {
     const balance = teamState.money ?? teamState.budget;
-    plantilla.innerHTML = `<div class="plantilla-empty">Toca un hueco en el campo<br>o ve al <strong>Mercado</strong> para fichar.<br><br>💡 Presupuesto: <strong>${(balance * 1_000_000).toLocaleString('es-ES')} €</strong></div>`;
+    plantilla.innerHTML = `<div class="plantilla-empty">Toca un hueco en el campo<br>o ve al <strong>Mercado</strong> para fichar.<br><br>💡 Presupuesto: <strong>${balance.toLocaleString('es-ES')} €</strong></div>`;
   } else {
     activePlayers.forEach(({ player, idx }) => {
       const card = buildPlayerCard(player, true, {
@@ -139,8 +139,8 @@ async function removePlayer(idx, ctx) {
   const newState = {
     ...teamState,
     team:     newTeam,
-    money:    +(balance + p.val).toFixed(1),
-    budget:   +(balance + p.val).toFixed(1),
+    money:    balance + p.val * 1_000_000,
+    budget:   balance + p.val * 1_000_000,
     totalPts: calcTotalPts(newTeam),
   };
   window.NET11.ctx.teamState = newState;
@@ -158,7 +158,7 @@ export async function buyPlayer(pid, ctx) {
   const teamIds = new Set(teamState.team.filter(Boolean));
   if (teamIds.has(pid)) return showToast('Ya está en tu equipo', 'warn');
   const balance = teamState.money ?? teamState.budget;
-  if (balance < p.val) return showToast('¡Sin presupuesto suficiente!', 'error');
+  if (balance < p.val * 1_000_000) return showToast('¡Sin presupuesto suficiente!', 'error');
 
   const slots  = FORMATIONS[teamState.formation];
   const active = window.NET11.activeSlot;
@@ -178,8 +178,8 @@ export async function buyPlayer(pid, ctx) {
   const newState = {
     ...teamState,
     team:     newTeam,
-    money:    +(balance - p.val).toFixed(1),
-    budget:   +(balance - p.val).toFixed(1),
+    money:    balance - p.val * 1_000_000,
+    budget:   balance - p.val * 1_000_000,
     totalPts: calcTotalPts(newTeam),
   };
   window.NET11.ctx.teamState = newState;
