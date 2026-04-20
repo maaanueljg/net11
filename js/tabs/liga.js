@@ -326,6 +326,11 @@ function renderEconomia(container, league, locked) {
         balEl.style.color = 'var(--accent)';
         amountInput.value = '';
         showToast(`✅ ${amount > 0 ? '+' : ''}${amount.toLocaleString('es-ES')} € a ${name}`);
+        // Actualiza el contexto en memoria si es el usuario actual
+        if (uid === window.NET11?.ctx?.user?.uid && window.NET11.ctx.teamState) {
+          window.NET11.ctx.teamState.money = newBalance;
+          window.NET11.refresh();
+        }
       } catch (e) { showToast(e.message || 'Error al ajustar', 'error'); }
       addBtn.disabled = false; subBtn.disabled = false;
     };

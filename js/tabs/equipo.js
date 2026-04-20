@@ -14,7 +14,7 @@ export function render(wrap, ctx) {
     return;
   }
 
-  const { team, budget, formation } = teamState;
+  const { team, budget, formation, money } = teamState;
   const slots = FORMATIONS[formation];
 
   updateHeader({
@@ -22,6 +22,7 @@ export function render(wrap, ctx) {
     teamCount: team.filter(Boolean).length,
     pts: calcTotalPts(team),
     formation,
+    money,
   });
 
   const titleEl = document.createElement('div');

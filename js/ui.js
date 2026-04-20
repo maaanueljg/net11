@@ -11,11 +11,21 @@ export function showToast(msg, type = 'success') {
   _toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
 }
 
-export function updateHeader({ budget, teamCount, pts, formation }) {
+export function updateHeader({ budget, teamCount, pts, formation, money }) {
   const budgetEl = document.getElementById('budget-display');
   if (budgetEl) {
     budgetEl.textContent = budget.toFixed(1) + 'M€';
     budgetEl.className = 'amount ' + (budget < 10 ? 'low' : 'ok');
+  }
+  const moneyPill = document.getElementById('money-pill');
+  const moneyEl   = document.getElementById('money-display');
+  if (moneyPill && moneyEl) {
+    if (money !== undefined && money !== null) {
+      moneyEl.textContent = money.toLocaleString('es-ES') + ' €';
+      moneyPill.style.display = '';
+    } else {
+      moneyPill.style.display = 'none';
+    }
   }
   const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
   el('stat-players', `${teamCount}/11`);
