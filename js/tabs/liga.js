@@ -302,52 +302,68 @@ function renderEconomia(container, league, locked) {
     const name = (league.memberNames?.[uid]) || uid.slice(0, 8);
 
     const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px';
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:8px';
 
     const nameEl = document.createElement('div');
     nameEl.style.cssText = 'flex:1;font-size:13px;color:var(--text)';
     nameEl.textContent = name;
 
     const balEl = document.createElement('div');
-    balEl.style.cssText = 'font-size:11px;color:var(--muted);min-width:60px;text-align:right';
+    balEl.style.cssText = 'font-size:11px;color:var(--muted);min-width:70px;text-align:right';
     balEl.textContent = '…';
 
-    const amountInput = textInput('', { type: 'number', placeholder: '+/- €' });
-    amountInput.style.cssText = 'width:90px;margin-bottom:0';
+    const amountInput = textInput('', { type: 'number', min: 1, placeholder: 'Importe' });
+    amountInput.style.cssText = 'width:80px;margin-bottom:0';
 
-    const applyBtn = document.createElement('button');
-    applyBtn.className = 'pc-btn buy';
-    applyBtn.style.cssText = 'font-size:11px;padding:4px 10px;white-space:nowrap';
-    applyBtn.textContent = 'Aplicar';
-
-    applyBtn.onclick = async () => {
-      const amount = Number(amountInput.value);
-      if (!amount) { showToast('Introduce un importe', 'error'); return; }
-      applyBtn.disabled = true;
+    const apply = async (sign) => {
+      const raw = Number(amountInput.value);
+      if (!raw || raw <= 0) { showToast('Introduce un importe positivo', 'error'); return; }
+      const amount = sign * raw;
+      addBtn.disabled = true; subBtn.disabled = true;
       try {
         const newBalance = await adjustMemberMoney(league.code, uid, amount);
         balEl.textContent = newBalance.toLocaleString('es-ES') + ' €';
+        balEl.style.color = 'var(--accent)';
         amountInput.value = '';
         showToast(`✅ ${amount > 0 ? '+' : ''}${amount.toLocaleString('es-ES')} € a ${name}`);
       } catch (e) { showToast(e.message || 'Error al ajustar', 'error'); }
-      applyBtn.disabled = false;
+      addBtn.disabled = false; subBtn.disabled = false;
     };
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'pc-btn buy';
+    addBtn.style.cssText = 'font-size:12px;padding:4px 8px;min-width:32px';
+    addBtn.textContent = '＋';
+    addBtn.onclick = () => apply(1);
+
+    const subBtn = document.createElement('button');
+    subBtn.className = 'pc-btn sell';
+    subBtn.style.cssText = 'font-size:12px;padding:4px 8px;min-width:32px';
+    subBtn.textContent = '－';
+    subBtn.onclick = () => apply(-1);
 
     row.appendChild(nameEl);
     row.appendChild(balEl);
     row.appendChild(amountInput);
-    row.appendChild(applyBtn);
+    row.appendChild(addBtn);
+    row.appendChild(subBtn);
     sec.appendChild(row);
 
-    (async () => {
-      try {
-        const { db } = await import('../firebase.js');
-        const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
-        const snap = await getDoc(doc(db, 'users', uid, 'leagueTeams', league.code.toUpperCase()));
-        const money = snap.exists() ? (snap.data().money ?? 0) : 0;
-        balEl.textContent = money.toLocaleString('es-ES') + ' €';
-      } catch { balEl.textContent = '—'; }
-    })();
+    // Carga saldo inicial desde contexto (usuario actual) o Firestore
+    const ctxTeam = window.NET11?.ctx?.teamState;
+    if (uid === window.NET11?.ctx?.user?.uid && ctxTeam?.money !== undefined) {
+      balEl.textContent = ctxTeam.money.toLocaleString('es-ES') + ' €';
+    } else {
+      (async () => {
+        try {
+          const { db } = await import('../firebase.js');
+          const { doc: _doc, getDoc: _getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+          const snap = await _getDoc(_doc(db, 'users', uid, 'leagueTeams', league.code.toUpperCase()));
+          if (snap.exists()) balEl.textContent = (snap.data().money ?? 0).toLocaleString('es-ES') + ' €';
+          else balEl.textContent = '—';
+        } catch { balEl.textContent = '—'; }
+      })();
+    }
   });
 }
 
