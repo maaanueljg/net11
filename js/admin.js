@@ -3,7 +3,7 @@ import {
   onAuthStateChanged, GoogleAuthProvider, signInWithPopup,
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 import {
-  doc, setDoc, getDoc, collection, getDocs, arrayUnion,
+  doc, setDoc, getDoc, collection, getDocs, arrayUnion, updateDoc,
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 import { PLAYERS } from './players.js';
 import { calcPoints } from './scoring.js';
@@ -171,6 +171,7 @@ window.publishJornada = async () => {
 
     const usersSnap   = await getDocs(collection(db, 'users'));
     const leagueCache = {};
+    const leaguePts = {}; // { leagueCode: { uid: totalPts } }
     let updated = 0;
 
     for (const userDoc of usersSnap.docs) {
@@ -195,9 +196,18 @@ window.publishJornada = async () => {
             return sum + calcPoints(jornadaData[pid] || {}, player.pos, scoringMode);
           }, 0);
 
+          if (!leaguePts[leagueCode]) leaguePts[leagueCode] = {};
+          leaguePts[leagueCode][userDoc.id] = totalPts;
+
+          const leagueData  = leagueCache[leagueCode];
+          const moneyEarned = (leagueData.moneyPerPoint ?? 0) * totalPts;
+          const teamData    = { totalPts };
+          if (moneyEarned > 0) {
+            teamData.money = (teamSnap.data().money ?? (leagueData.startingMoney ?? 100)) + moneyEarned;
+          }
           await setDoc(
             doc(db, 'users', userDoc.id, 'leagueTeams', leagueCode),
-            { totalPts },
+            teamData,
             { merge: true }
           );
           updated++;
@@ -206,6 +216,31 @@ window.publishJornada = async () => {
     }
 
     btn.textContent = `✅ Publicado · ${updated} equipos actualizados`;
+
+    // Distribute jornada bonus and increment jornadasPublished per league
+    for (const [leagueCode, ptsMap] of Object.entries(leaguePts)) {
+      try {
+        const leagueData = leagueCache[leagueCode];
+
+        await updateDoc(doc(db, 'leagues', leagueCode), {
+          jornadasPublished: (leagueData.jornadasPublished ?? 0) + 1,
+        });
+
+        const bonus = leagueData.jornadaBonus;
+        if (!bonus) continue;
+        const maxPts  = Math.max(...Object.values(ptsMap));
+        const winners = Object.keys(ptsMap).filter(uid => ptsMap[uid] === maxPts);
+        const share   = Math.floor(bonus / winners.length);
+        for (const uid of winners) {
+          const teamRef  = doc(db, 'users', uid, 'leagueTeams', leagueCode);
+          const teamSnap = await getDoc(teamRef);
+          if (!teamSnap.exists()) continue;
+          const currentMoney = teamSnap.data().money ?? (leagueData.startingMoney ?? 100);
+          await setDoc(teamRef, { money: currentMoney + share }, { merge: true });
+        }
+      } catch { /* skip league */ }
+    }
+
     setTimeout(() => { btn.disabled = false; btn.textContent = '🚀 Publicar jornada'; }, 3000);
   } catch (err) {
     btn.disabled = false;
