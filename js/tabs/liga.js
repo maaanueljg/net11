@@ -1,7 +1,3 @@
-import {
-  doc, getDoc,
-} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
-import { db } from '../firebase.js';
 import { updateLeague, kickMember, getShareLink } from '../leagues.js';
 import { showToast } from '../ui.js';
 
@@ -89,6 +85,7 @@ function renderGeneral(container, league, locked) {
   sec.appendChild(modeLabel);
 
   let selectedMode = league.scoringMode || 'base';
+  let newspaperInput = null;
   let newspaperRow;
 
   if (locked) {
@@ -123,41 +120,27 @@ function renderGeneral(container, league, locked) {
     });
     sec.appendChild(modeGrid);
 
-    const newspaperInput = textInput(league.newspaper || '', { placeholder: 'Periódico fuente (ej: Marca, AS…)', maxlength: 40 });
+    newspaperInput = textInput(league.newspaper || '', { placeholder: 'Periódico fuente (ej: Marca, AS…)', maxlength: 40 });
     newspaperRow = inputRow('Periódico fuente', newspaperInput);
     newspaperRow.style.display = selectedMode === 'cronistas' ? 'block' : 'none';
     sec.appendChild(newspaperRow);
-
-    const btn = saveBtn();
-    btn.onclick = async () => {
-      const name = nameInput.value.trim();
-      if (!name) { showToast('El nombre no puede estar vacío', 'error'); return; }
-      btn.disabled = true;
-      try {
-        const fields = { name, scoringMode: selectedMode };
-        if (selectedMode === 'cronistas') fields.newspaper = newspaperInput.value.trim() || null;
-        await updateLeague(league.code, fields);
-        Object.assign(league, fields);
-        window.NET11.ctx.league = league;
-        showToast('✅ Ajustes generales guardados');
-      } catch { showToast('Error al guardar', 'error'); }
-      btn.disabled = false;
-    };
-    sec.appendChild(btn);
-    return;
   }
 
-  // Locked: only name editable
   const btn = saveBtn();
   btn.onclick = async () => {
     const name = nameInput.value.trim();
     if (!name) { showToast('El nombre no puede estar vacío', 'error'); return; }
     btn.disabled = true;
     try {
-      await updateLeague(league.code, { name });
-      league.name = name;
+      const fields = { name };
+      if (!locked) {
+        fields.scoringMode = selectedMode;
+        if (selectedMode === 'cronistas') fields.newspaper = newspaperInput.value.trim() || null;
+      }
+      await updateLeague(league.code, fields);
+      Object.assign(league, fields);
       window.NET11.ctx.league = league;
-      showToast('✅ Nombre actualizado');
+      showToast(locked ? '✅ Nombre actualizado' : '✅ Ajustes generales guardados');
     } catch { showToast('Error al guardar', 'error'); }
     btn.disabled = false;
   };
@@ -233,7 +216,7 @@ function renderEconomia(container, league, locked) {
 
   const bonusAmountWrap = document.createElement('div');
   bonusAmountWrap.style.display = bonusCheck.checked ? 'block' : 'none';
-  const bonusAmountInput = textInput(league.jornadaBonus ?? 500000, { type: 'number', min: 0 });
+  const bonusAmountInput = textInput(league.jornadaBonus ?? 500000, { type: 'number', min: 1 });
   bonusAmountWrap.appendChild(inputRow('Importe del bonus (€)', bonusAmountInput));
   sec.appendChild(bonusAmountWrap);
   bonusCheck.onchange = () => { bonusAmountWrap.style.display = bonusCheck.checked ? 'block' : 'none'; };
@@ -399,9 +382,20 @@ function renderMiembros(container, league, myUid) {
       row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)';
       const name = document.createElement('div');
       name.style.flex = '1';
-      name.innerHTML = `
-        <div style="font-size:13px;font-weight:600;color:${uid===myUid?'var(--accent)':'#fff'}">${league.memberNames[uid] || '—'}${uid===myUid?' <small style="color:var(--muted)">(Tú)</small>':''}</div>
-        <div style="font-size:10px;color:var(--muted)">${uid.slice(0,8)}…</div>`;
+      const nameDiv = document.createElement('div');
+      nameDiv.style.cssText = `font-size:13px;font-weight:600;color:${uid===myUid?'var(--accent)':'#fff'}`;
+      nameDiv.textContent = league.memberNames[uid] || '—';
+      if (uid === myUid) {
+        const small = document.createElement('small');
+        small.style.cssText = 'color:var(--muted)';
+        small.textContent = ' (Tú)';
+        nameDiv.appendChild(small);
+      }
+      const uidDiv = document.createElement('div');
+      uidDiv.style.cssText = 'font-size:10px;color:var(--muted)';
+      uidDiv.textContent = uid.slice(0, 8) + '…';
+      name.appendChild(nameDiv);
+      name.appendChild(uidDiv);
       row.appendChild(name);
       if (uid !== myUid) {
         const kickBtn = document.createElement('button');
@@ -434,11 +428,15 @@ function renderMiembros(container, league, myUid) {
   inviteBtn.style.cssText = 'padding:10px;background:var(--bg4);color:var(--text);border:1px solid var(--border)';
   inviteBtn.textContent = '🔗 Copiar enlace de invitación';
   inviteBtn.onclick = async () => {
-    if (navigator.share) {
-      await navigator.share({ title: 'Net11', text: `Únete a mi liga con código ${league.code}`, url: link });
-    } else {
-      await navigator.clipboard.writeText(link);
-      showToast('Link copiado 📋');
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Net11', text: `Únete a mi liga con código ${league.code}`, url: link });
+      } else {
+        await navigator.clipboard.writeText(link);
+        showToast('Link copiado 📋');
+      }
+    } catch (e) {
+      if (e.name !== 'AbortError') showToast('No se pudo copiar el enlace', 'error');
     }
   };
   sec.appendChild(inviteBtn);
