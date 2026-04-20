@@ -114,7 +114,7 @@ export function render(wrap, ctx) {
 
   if (activePlayers.length === 0) {
     const balance = teamState.money ?? teamState.budget;
-    plantilla.innerHTML = `<div class="plantilla-empty">Toca un hueco en el campo<br>o ve al <strong>Mercado</strong> para fichar.<br><br>💡 Presupuesto: <strong>${balance.toFixed(1)}M€</strong></div>`;
+    plantilla.innerHTML = `<div class="plantilla-empty">Toca un hueco en el campo<br>o ve al <strong>Mercado</strong> para fichar.<br><br>💡 Presupuesto: <strong>${balance.toLocaleString('es-ES')} €</strong></div>`;
   } else {
     activePlayers.forEach(({ player, idx }) => {
       const card = buildPlayerCard(player, true, {

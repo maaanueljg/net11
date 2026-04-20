@@ -15,7 +15,7 @@ export function updateHeader({ budget, teamCount, pts, formation, money }) {
   const balance = money ?? budget;
   const budgetEl = document.getElementById('budget-display');
   if (budgetEl) {
-    budgetEl.textContent = balance.toFixed(1) + 'M€';
+    budgetEl.textContent = balance.toLocaleString('es-ES') + ' €';
     budgetEl.className = 'amount ' + (balance < 10 ? 'low' : 'ok');
   }
   const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
