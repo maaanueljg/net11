@@ -15,11 +15,14 @@ export function render(wrap, ctx) {
   }
 
   const { team, budget, formation, money } = teamState;
+  const bench = teamState.bench || [];
   const slots = FORMATIONS[formation];
+  const maxPlayers = league?.maxPlayersPerTeam ?? 15;
 
   updateHeader({
     budget,
-    teamCount: team.filter(Boolean).length,
+    teamCount: team.filter(Boolean).length + bench.length,
+    maxPlayers,
     pts: calcTotalPts(team),
     formation,
     money,
@@ -112,7 +115,7 @@ export function render(wrap, ctx) {
 
   const activePlayers = team.map((id, idx) => id ? { player: getPlayer(id), idx } : null).filter(Boolean);
 
-  if (activePlayers.length === 0) {
+  if (activePlayers.length === 0 && bench.length === 0) {
     const balance = teamState.money ?? teamState.budget;
     plantilla.innerHTML = `<div class="plantilla-empty">Toca un hueco en el campo<br>o ve al <strong>Mercado</strong> para fichar.<br><br>💡 Presupuesto: <strong>${balance.toLocaleString('es-ES')} €</strong></div>`;
   } else {
@@ -124,6 +127,22 @@ export function render(wrap, ctx) {
       });
       plantilla.appendChild(card);
     });
+    if (bench.length > 0) {
+      const benchLabel = document.createElement('div');
+      benchLabel.style.cssText = 'font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:12px 0 6px;padding:0 4px';
+      benchLabel.textContent = '🪑 Banquillo';
+      plantilla.appendChild(benchLabel);
+      bench.forEach((pid, idx) => {
+        const player = getPlayer(pid);
+        if (!player) return;
+        const card = buildPlayerCard(player, true, {
+          onSell: () => removeBenchPlayer(idx, ctx),
+          canBuy: false,
+          alreadyOwned: false,
+        });
+        plantilla.appendChild(card);
+      });
+    }
   }
   wrap.appendChild(plantilla);
 }
@@ -150,15 +169,40 @@ async function removePlayer(idx, ctx) {
   window.NET11.refresh();
 }
 
+async function removeBenchPlayer(idx, ctx) {
+  const { user, league, teamState } = ctx;
+  const pid = (teamState.bench || [])[idx];
+  if (!pid) return;
+  const p = getPlayer(pid);
+  const newBench = [...(teamState.bench || [])];
+  newBench.splice(idx, 1);
+  const balance = teamState.money ?? teamState.budget;
+  const newState = {
+    ...teamState,
+    bench:  newBench,
+    money:  balance + p.val * 1_000_000,
+    budget: balance + p.val * 1_000_000,
+  };
+  window.NET11.ctx.teamState = newState;
+  ctx.teamState = newState;
+  await saveTeam(user.uid, league.code, newState);
+  showToast(`🔴 ${p.name} vendido · +${(p.val * 1_000_000).toLocaleString('es-ES')} €`, 'error');
+  window.NET11.refresh();
+}
+
 export async function buyPlayer(pid, ctx) {
   const { user, league, teamState } = ctx;
   const p = getPlayer(pid);
   if (!p) return;
 
-  const teamIds = new Set(teamState.team.filter(Boolean));
+  const teamIds = new Set([...teamState.team.filter(Boolean), ...(teamState.bench || [])]);
   if (teamIds.has(pid)) return showToast('Ya está en tu equipo', 'warn');
   const balance = teamState.money ?? teamState.budget;
   if (balance < p.val * 1_000_000) return showToast('¡Sin presupuesto suficiente!', 'error');
+
+  const totalPlayers = teamState.team.filter(Boolean).length + (teamState.bench || []).length;
+  const maxPlayers   = league?.maxPlayersPerTeam ?? 15;
+  if (totalPlayers >= maxPlayers) return showToast(`Plantilla llena (máx. ${maxPlayers})`, 'error');
 
   const slots  = FORMATIONS[teamState.formation];
   const active = window.NET11.activeSlot;
@@ -171,21 +215,39 @@ export async function buyPlayer(pid, ctx) {
     targetIdx = slots.findIndex((s, i) => s.pos === p.pos && !teamState.team[i]);
   }
 
-  if (targetIdx === -1) return showToast(`No hay hueco de ${p.pos} libre`, 'error');
+  const cost = p.val * 1_000_000;
+
+  if (targetIdx === -1) {
+    // No free formation slot — add to bench
+    const newBench = [...(teamState.bench || []), pid];
+    const newState = {
+      ...teamState,
+      bench:  newBench,
+      money:  balance - cost,
+      budget: balance - cost,
+    };
+    window.NET11.ctx.teamState = newState;
+    ctx.teamState = newState;
+    window.NET11.activeSlot = null;
+    await saveTeam(user.uid, league.code, newState);
+    showToast(`✅ ${p.name} en banquillo · -${cost.toLocaleString('es-ES')} €`);
+    window.NET11.switchTab('equipo');
+    return;
+  }
 
   const newTeam = [...teamState.team];
   newTeam[targetIdx] = pid;
   const newState = {
     ...teamState,
     team:     newTeam,
-    money:    balance - p.val * 1_000_000,
-    budget:   balance - p.val * 1_000_000,
+    money:    balance - cost,
+    budget:   balance - cost,
     totalPts: calcTotalPts(newTeam),
   };
   window.NET11.ctx.teamState = newState;
   ctx.teamState = newState;
   window.NET11.activeSlot = null;
   await saveTeam(user.uid, league.code, newState);
-  showToast(`✅ ${p.name} fichado · -${(p.val * 1_000_000).toLocaleString('es-ES')} €`);
+  showToast(`✅ ${p.name} fichado · -${cost.toLocaleString('es-ES')} €`);
   window.NET11.switchTab('equipo');
 }

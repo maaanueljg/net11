@@ -63,7 +63,7 @@ export function render(wrap, ctx) {
 function updateList(listWrap, ctx) {
   const { teamState } = ctx;
   const activeSlot    = window.NET11.activeSlot;
-  const teamIds       = new Set(teamState.team.filter(Boolean));
+  const teamIds       = new Set([...teamState.team.filter(Boolean), ...(teamState.bench || [])]);
 
   let players = getByCompetition(teamState.competition)
     .filter(p => {
@@ -84,10 +84,13 @@ function updateList(listWrap, ctx) {
     return;
   }
 
+  const totalPlayers = teamState.team.filter(Boolean).length + (teamState.bench || []).length;
+  const maxPlayers   = ctx.league?.maxPlayersPerTeam ?? 15;
+
   players.forEach(p => {
     const alreadyOwned = teamIds.has(p.id);
     const balance      = teamState.money ?? teamState.budget;
-    const canBuy       = !alreadyOwned && balance >= p.val * 1_000_000;
+    const canBuy       = !alreadyOwned && balance >= p.val * 1_000_000 && totalPlayers < maxPlayers;
     const card = buildPlayerCard(p, false, {
       onBuy:        () => buyPlayer(p.id, ctx),
       onSell:       () => {},

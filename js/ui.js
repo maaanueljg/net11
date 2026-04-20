@@ -11,7 +11,7 @@ export function showToast(msg, type = 'success') {
   _toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
 }
 
-export function updateHeader({ budget, teamCount, pts, formation, money }) {
+export function updateHeader({ budget, teamCount, pts, formation, money, maxPlayers = 11 }) {
   const balance = money ?? budget;
   const budgetEl = document.getElementById('budget-display');
   if (budgetEl) {
@@ -19,7 +19,7 @@ export function updateHeader({ budget, teamCount, pts, formation, money }) {
     budgetEl.className = 'amount ' + (balance < 10 ? 'low' : 'ok');
   }
   const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
-  el('stat-players', `${teamCount}/11`);
+  el('stat-players', `${teamCount}/${maxPlayers}`);
   el('stat-pts', pts);
   el('stat-form', formation);
 }

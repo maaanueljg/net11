@@ -175,15 +175,21 @@ function renderPlantillas(container, league) {
   });
   sec.appendChild(grid);
 
+  const maxInput = textInput(league.maxPlayersPerTeam ?? 15, { type: 'number', min: 11, max: 30 });
+  sec.appendChild(inputRow('Máximo de jugadores en plantilla (incluyendo banquillo)', maxInput));
+
   const btn = saveBtn();
   btn.onclick = async () => {
     if (selected.size === 0) { showToast('Activa al menos una alineación', 'error'); return; }
+    const max = Number(maxInput.value) || 15;
+    if (max < 11) { showToast('El mínimo es 11 jugadores', 'error'); return; }
     btn.disabled = true;
     try {
-      await updateLeague(league.code, { formations: [...selected] });
+      await updateLeague(league.code, { formations: [...selected], maxPlayersPerTeam: max });
       league.formations = [...selected];
+      league.maxPlayersPerTeam = max;
       window.NET11.ctx.league = league;
-      showToast('✅ Alineaciones actualizadas');
+      showToast('✅ Plantillas actualizadas');
     } catch { showToast('Error al guardar', 'error'); }
     btn.disabled = false;
   };
