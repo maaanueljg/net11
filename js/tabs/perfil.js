@@ -36,26 +36,70 @@ export function render(wrap, ctx) {
     const leagueList = document.createElement('div');
     leagueList.style.padding = '0 16px';
     leagues.forEach(code => {
+      const isActive = code === league?.code;
+      const known    = isActive ? league : null;
+
       const item = document.createElement('div');
-      item.style.cssText = `background:var(--bg3);border:1px solid ${code === league?.code ? 'var(--accent)' : 'var(--border)'};border-radius:var(--r);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer`;
-      item.innerHTML = `
-        <div style="flex:1">
-          <div style="font-weight:600;font-size:14px;color:${code === league?.code ? 'var(--accent)' : '#fff'}">${code}${code === league?.code ? ' ✓' : ''}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">Toca para activar</div>
-        </div>
-        <button class="pc-btn buy" style="font-size:11px;padding:4px 10px">Compartir</button>`;
-      item.querySelector('button').onclick = async e => {
+      item.style.cssText = `background:var(--bg3);border:1px solid ${isActive ? 'var(--accent)' : 'var(--border)'};border-radius:var(--r);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer`;
+
+      const info = document.createElement('div');
+      info.style.flex = '1';
+
+      const nameEl = document.createElement('div');
+      nameEl.style.cssText = `font-weight:600;font-size:14px;color:${isActive ? 'var(--accent)' : '#fff'}`;
+      nameEl.textContent = (known?.name || code) + (isActive ? ' ✓' : '');
+      info.appendChild(nameEl);
+
+      const codeEl = document.createElement('div');
+      codeEl.style.cssText = 'font-size:10px;color:var(--muted);margin-top:1px';
+      codeEl.style.display = 'none';
+      info.appendChild(codeEl);
+
+      const subEl = document.createElement('div');
+      subEl.style.cssText = 'font-size:11px;color:var(--muted);margin-top:2px';
+      subEl.textContent = isActive ? '' : 'Toca para activar';
+      info.appendChild(subEl);
+
+      const shareBtn = document.createElement('button');
+      shareBtn.className = 'pc-btn buy';
+      shareBtn.style.cssText = 'font-size:11px;padding:4px 10px';
+      shareBtn.textContent = 'Compartir';
+      shareBtn.style.display = 'none';
+      shareBtn.onclick = async e => {
         e.stopPropagation();
         const link = getShareLink(code);
-        if (navigator.share) {
-          await navigator.share({ title: 'Net11', text: `Únete a mi liga con código ${code}`, url: link });
-        } else {
-          await navigator.clipboard.writeText(link);
-          showToast('Link copiado 📋');
+        try {
+          if (navigator.share) {
+            await navigator.share({ title: 'Net11', text: `Únete a mi liga con código ${code}`, url: link });
+          } else {
+            await navigator.clipboard.writeText(link);
+            showToast('Link copiado 📋');
+          }
+        } catch (err) {
+          if (err.name !== 'AbortError') showToast('No se pudo copiar el enlace', 'error');
         }
       };
+
+      const applyLeagueData = lg => {
+        nameEl.textContent = lg.name + (isActive ? ' ✓' : '');
+        if (lg.adminUid === user.uid) {
+          codeEl.textContent = `Código: ${lg.code}`;
+          codeEl.style.display = '';
+          shareBtn.style.display = '';
+        }
+      };
+
+      if (known) {
+        applyLeagueData(known);
+      } else {
+        getLeague(code).then(lg => { if (lg) applyLeagueData(lg); }).catch(() => {});
+      }
+
+      item.appendChild(info);
+      item.appendChild(shareBtn);
+
       item.onclick = async () => {
-        if (code === league?.code) return;
+        if (isActive) return;
         const newLeague = await getLeague(code);
         if (!newLeague) return showToast('Error cargando liga', 'error');
         window.NET11.ctx.league    = newLeague;
