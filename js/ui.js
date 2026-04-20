@@ -12,20 +12,11 @@ export function showToast(msg, type = 'success') {
 }
 
 export function updateHeader({ budget, teamCount, pts, formation, money }) {
+  const balance = money ?? budget;
   const budgetEl = document.getElementById('budget-display');
   if (budgetEl) {
-    budgetEl.textContent = budget.toFixed(1) + 'M€';
-    budgetEl.className = 'amount ' + (budget < 10 ? 'low' : 'ok');
-  }
-  const moneyPill = document.getElementById('money-pill');
-  const moneyEl   = document.getElementById('money-display');
-  if (moneyPill && moneyEl) {
-    if (money !== undefined && money !== null) {
-      moneyEl.textContent = money.toLocaleString('es-ES') + ' €';
-      moneyPill.style.display = '';
-    } else {
-      moneyPill.style.display = 'none';
-    }
+    budgetEl.textContent = balance.toFixed(1) + 'M€';
+    budgetEl.className = 'amount ' + (balance < 10 ? 'low' : 'ok');
   }
   const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
   el('stat-players', `${teamCount}/11`);

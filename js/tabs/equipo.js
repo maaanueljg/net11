@@ -134,10 +134,12 @@ async function removePlayer(idx, ctx) {
   const p = getPlayer(pid);
   const newTeam = [...teamState.team];
   newTeam[idx] = null;
+  const balance = teamState.money ?? teamState.budget;
   const newState = {
     ...teamState,
     team:     newTeam,
-    budget:   +(teamState.budget + p.val).toFixed(1),
+    money:    +(balance + p.val).toFixed(1),
+    budget:   +(balance + p.val).toFixed(1),
     totalPts: calcTotalPts(newTeam),
   };
   window.NET11.ctx.teamState = newState;
@@ -154,7 +156,8 @@ export async function buyPlayer(pid, ctx) {
 
   const teamIds = new Set(teamState.team.filter(Boolean));
   if (teamIds.has(pid)) return showToast('Ya está en tu equipo', 'warn');
-  if (teamState.budget < p.val) return showToast('¡Sin presupuesto suficiente!', 'error');
+  const balance = teamState.money ?? teamState.budget;
+  if (balance < p.val) return showToast('¡Sin presupuesto suficiente!', 'error');
 
   const slots  = FORMATIONS[teamState.formation];
   const active = window.NET11.activeSlot;
@@ -174,7 +177,8 @@ export async function buyPlayer(pid, ctx) {
   const newState = {
     ...teamState,
     team:     newTeam,
-    budget:   +(teamState.budget - p.val).toFixed(1),
+    money:    +(balance - p.val).toFixed(1),
+    budget:   +(balance - p.val).toFixed(1),
     totalPts: calcTotalPts(newTeam),
   };
   window.NET11.ctx.teamState = newState;
