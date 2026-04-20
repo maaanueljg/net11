@@ -3,7 +3,7 @@ import {
   onAuthStateChanged, GoogleAuthProvider, signInWithPopup,
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 import {
-  doc, setDoc, getDoc, collection, getDocs, arrayUnion, updateDoc,
+  doc, setDoc, getDoc, collection, getDocs, arrayUnion, updateDoc, increment,
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 import { PLAYERS } from './players.js';
 import { calcPoints } from './scoring.js';
@@ -184,6 +184,7 @@ window.publishJornada = async () => {
             leagueCache[leagueCode] = ls.exists() ? ls.data() : { scoringMode: 'base' };
           }
           const scoringMode = leagueCache[leagueCode].scoringMode || 'base';
+          if (!leaguePts[leagueCode]) leaguePts[leagueCode] = {};
           if (scoringMode === 'puras') continue;
 
           const teamSnap = await getDoc(doc(db, 'users', userDoc.id, 'leagueTeams', leagueCode));
@@ -223,7 +224,7 @@ window.publishJornada = async () => {
         const leagueData = leagueCache[leagueCode];
 
         await updateDoc(doc(db, 'leagues', leagueCode), {
-          jornadasPublished: (leagueData.jornadasPublished ?? 0) + 1,
+          jornadasPublished: increment(1),
         });
 
         const bonus = leagueData.jornadaBonus;
@@ -231,6 +232,7 @@ window.publishJornada = async () => {
         const maxPts  = Math.max(...Object.values(ptsMap));
         const winners = Object.keys(ptsMap).filter(uid => ptsMap[uid] === maxPts);
         const share   = Math.floor(bonus / winners.length);
+        if (share <= 0) continue;
         for (const uid of winners) {
           const teamRef  = doc(db, 'users', uid, 'leagueTeams', leagueCode);
           const teamSnap = await getDoc(teamRef);
