@@ -1,4 +1,4 @@
-import { updateLeague, kickMember, getShareLink } from '../leagues.js';
+import { updateLeague, kickMember, getShareLink, adjustMemberMoney } from '../leagues.js';
 import { showToast } from '../ui.js';
 
 export async function render(wrap, ctx) {
@@ -290,6 +290,65 @@ function renderEconomia(container, league, locked) {
     btn.disabled = false;
   };
   sec.appendChild(btn);
+
+  // Ajuste manual de fondos por equipo
+  const adjTitle = document.createElement('div');
+  adjTitle.style.cssText = 'font-size:11px;color:var(--muted);margin:14px 0 8px';
+  adjTitle.textContent = 'Ajuste manual de fondos';
+  sec.appendChild(adjTitle);
+
+  const members = league.members || [];
+  members.forEach(uid => {
+    const name = (league.memberNames?.[uid]) || uid.slice(0, 8);
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px';
+
+    const nameEl = document.createElement('div');
+    nameEl.style.cssText = 'flex:1;font-size:13px;color:var(--text)';
+    nameEl.textContent = name;
+
+    const balEl = document.createElement('div');
+    balEl.style.cssText = 'font-size:11px;color:var(--muted);min-width:60px;text-align:right';
+    balEl.textContent = '…';
+
+    const amountInput = textInput('', { type: 'number', placeholder: '+/- €' });
+    amountInput.style.cssText = 'width:90px;margin-bottom:0';
+
+    const applyBtn = document.createElement('button');
+    applyBtn.className = 'pc-btn buy';
+    applyBtn.style.cssText = 'font-size:11px;padding:4px 10px;white-space:nowrap';
+    applyBtn.textContent = 'Aplicar';
+
+    applyBtn.onclick = async () => {
+      const amount = Number(amountInput.value);
+      if (!amount) { showToast('Introduce un importe', 'error'); return; }
+      applyBtn.disabled = true;
+      try {
+        const newBalance = await adjustMemberMoney(league.code, uid, amount);
+        balEl.textContent = newBalance.toLocaleString('es-ES') + ' €';
+        amountInput.value = '';
+        showToast(`✅ ${amount > 0 ? '+' : ''}${amount.toLocaleString('es-ES')} € a ${name}`);
+      } catch (e) { showToast(e.message || 'Error al ajustar', 'error'); }
+      applyBtn.disabled = false;
+    };
+
+    row.appendChild(nameEl);
+    row.appendChild(balEl);
+    row.appendChild(amountInput);
+    row.appendChild(applyBtn);
+    sec.appendChild(row);
+
+    (async () => {
+      try {
+        const { db } = await import('../firebase.js');
+        const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+        const snap = await getDoc(doc(db, 'users', uid, 'leagueTeams', league.code.toUpperCase()));
+        const money = snap.exists() ? (snap.data().money ?? 0) : 0;
+        balEl.textContent = money.toLocaleString('es-ES') + ' €';
+      } catch { balEl.textContent = '—'; }
+    })();
+  });
 }
 
 /* ── Section: Mercado y Fichajes ────────────────────────── */

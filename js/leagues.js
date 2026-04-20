@@ -110,3 +110,13 @@ export async function kickMember(code, memberUid) {
     [`memberNames.${memberUid}`]:   deleteField(),
   });
 }
+
+export async function adjustMemberMoney(leagueCode, uid, amount) {
+  if (!amount || isNaN(amount)) throw new Error('Importe inválido');
+  const teamRef = doc(db, 'users', uid, 'leagueTeams', leagueCode.toUpperCase());
+  const snap = await getDoc(teamRef);
+  if (!snap.exists()) throw new Error('Equipo no encontrado');
+  const current = snap.data().money ?? 0;
+  await updateDoc(teamRef, { money: current + amount });
+  return current + amount;
+}
