@@ -1,4 +1,4 @@
-const CACHE = 'net11-v1';
+const CACHE = 'net11-v2';
 const ASSETS = [
   '/', '/index.html', '/manifest.json',
   '/icon-192.png', '/icon-512.png',
@@ -6,6 +6,7 @@ const ASSETS = [
   '/js/ui.js', '/js/state.js', '/js/auth.js', '/js/leagues.js',
   '/js/tabs/equipo.js', '/js/tabs/mercado.js',
   '/js/tabs/ranking.js', '/js/tabs/jornada.js', '/js/tabs/perfil.js',
+  '/js/tabs/liga.js',
 ];
 
 self.addEventListener('install', e => {
