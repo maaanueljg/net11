@@ -190,15 +190,65 @@ function renderPlantillas(container, league) {
   sec.appendChild(btn);
 }
 
+/* ── Helpers: formatted number input ────────────────────── */
+
+function formattedNumberInput(value, opts = {}) {
+  // opts: { suffix, min, max, disabled }
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;align-items:center;gap:8px';
+
+  const fmt = v => {
+    const n = Number(v);
+    return (isNaN(n) ? 0 : n).toLocaleString('es-ES') + (opts.suffix ? ' ' + opts.suffix : '');
+  };
+
+  let rawValue = Number(value) || 0;
+
+  const label = document.createElement('span');
+  label.style.cssText = 'font-size:15px;font-weight:700;color:var(--accent);cursor:pointer;border-bottom:1px dashed var(--accent);padding-bottom:1px';
+  label.textContent = fmt(rawValue);
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.className = 'search-box';
+  input.style.cssText = 'margin-bottom:0;display:none;width:120px';
+  input.value = rawValue;
+  if (opts.min !== undefined) input.min = opts.min;
+  if (opts.max !== undefined) input.max = opts.max;
+  if (opts.disabled) { label.style.cursor = 'default'; label.style.borderBottom = 'none'; }
+
+  if (!opts.disabled) {
+    label.onclick = () => {
+      label.style.display = 'none';
+      input.style.display = '';
+      input.focus();
+      input.select();
+    };
+    const commit = () => {
+      rawValue = Number(input.value) || 0;
+      label.textContent = fmt(rawValue);
+      input.style.display = 'none';
+      label.style.display = '';
+    };
+    input.onblur = commit;
+    input.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } };
+  }
+
+  wrap.appendChild(label);
+  wrap.appendChild(input);
+  wrap.getValue = () => rawValue;
+  return wrap;
+}
+
 /* ── Section: Economía ──────────────────────────────────── */
 
 function renderEconomia(container, league, locked) {
   const sec = section(container, '💰 Economía');
 
-  const moneyInput = textInput(league.startingMoney ?? 100, { type: 'number', min: 0, max: 999999, disabled: locked });
-  sec.appendChild(inputRow('Dinero inicial por equipo (M€)' + (locked ? ' 🔒' : ''), moneyInput));
+  const startingMoneyInput = formattedNumberInput(league.startingMoney ?? 100, { suffix: 'M€', min: 0, disabled: locked });
+  sec.appendChild(inputRow('Dinero inicial por equipo (M€)' + (locked ? ' 🔒' : ''), startingMoneyInput));
 
-  const mppInput = textInput(league.moneyPerPoint ?? 0, { type: 'number', min: 0, max: 9999999 });
+  const mppInput = formattedNumberInput(league.moneyPerPoint ?? 0, { suffix: '€', min: 0 });
   sec.appendChild(inputRow('Dinero ganado por punto (€)', mppInput));
 
   const bonusRow = document.createElement('div');
@@ -216,8 +266,8 @@ function renderEconomia(container, league, locked) {
 
   const bonusAmountWrap = document.createElement('div');
   bonusAmountWrap.style.display = bonusCheck.checked ? 'block' : 'none';
-  const bonusAmountInput = textInput(league.jornadaBonus ?? 500000, { type: 'number', min: 1 });
-  bonusAmountWrap.appendChild(inputRow('Importe del bonus (€)', bonusAmountInput));
+  const bonusInput = formattedNumberInput(league.jornadaBonus ?? 500000, { suffix: '€', min: 1 });
+  bonusAmountWrap.appendChild(inputRow('Importe del bonus (€)', bonusInput));
   sec.appendChild(bonusAmountWrap);
   bonusCheck.onchange = () => { bonusAmountWrap.style.display = bonusCheck.checked ? 'block' : 'none'; };
 
@@ -225,14 +275,12 @@ function renderEconomia(container, league, locked) {
   btn.onclick = async () => {
     btn.disabled = true;
     try {
-      const bonusAmount = Number(bonusAmountInput.value);
       const fields = {
-        moneyPerPoint: Number(mppInput.value) || 0,
-        jornadaBonus:  bonusCheck.checked && bonusAmount > 0 ? bonusAmount : null,
+        moneyPerPoint: mppInput.getValue() || 0,
+        jornadaBonus:  bonusCheck.checked && bonusInput.getValue() > 0 ? bonusInput.getValue() : null,
       };
       if (!locked) {
-        const moneyRaw = moneyInput.value.trim();
-        fields.startingMoney = moneyRaw !== '' ? Number(moneyRaw) : 100;
+        fields.startingMoney = startingMoneyInput.getValue();
       }
       await updateLeague(league.code, fields);
       Object.assign(league, fields);
@@ -283,24 +331,6 @@ function renderMercado(container, league) {
     toggleBtn.disabled = false;
   };
   sec.appendChild(toggleBtn);
-
-  const stolenInput = textInput(league.maxStolenPerTeam ?? '', { type: 'number', min: 1, max: 20, placeholder: 'Sin límite' });
-  sec.appendChild(inputRow('Máx. jugadores robables por equipo por ventana (vacío = sin límite)', stolenInput));
-
-  const btn = saveBtn();
-  btn.onclick = async () => {
-    btn.disabled = true;
-    try {
-      const val = stolenInput.value.trim();
-      const maxStolenPerTeam = val ? Number(val) : null;
-      await updateLeague(league.code, { maxStolenPerTeam });
-      league.maxStolenPerTeam = maxStolenPerTeam;
-      window.NET11.ctx.league = league;
-      showToast('✅ Límite de mercado actualizado');
-    } catch { showToast('Error al guardar', 'error'); }
-    btn.disabled = false;
-  };
-  sec.appendChild(btn);
 }
 
 /* ── Section: Cláusulas ─────────────────────────────────── */
@@ -348,14 +378,115 @@ function renderClausulas(container, league, locked) {
   sec.appendChild(arWrap);
   arCheck.onchange = () => { arWrap.style.display = arCheck.checked ? 'block' : 'none'; };
 
+  // Ventanas de cláusulas
+  const windowsLabel = document.createElement('div');
+  windowsLabel.style.cssText = 'font-size:11px;color:var(--muted);margin:12px 0 6px';
+  windowsLabel.textContent = 'Ventanas de cláusulas';
+  sec.appendChild(windowsLabel);
+
+  let windows = [...(league.clauseWindows || [])];
+
+  const windowsList = document.createElement('div');
+  windowsList.style.marginBottom = '8px';
+  sec.appendChild(windowsList);
+
+  const renderWindows = () => {
+    windowsList.innerHTML = '';
+    if (windows.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'font-size:12px;color:var(--muted);margin-bottom:6px';
+      empty.textContent = 'Sin ventanas definidas';
+      windowsList.appendChild(empty);
+      return;
+    }
+    windows.forEach((w, i) => {
+      const card = document.createElement('div');
+      card.style.cssText = 'background:var(--bg4);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;gap:8px';
+      const info = document.createElement('div');
+      info.style.flex = '1';
+      const dateStr = `${w.startDate} → ${w.endDate}`;
+      const jorStr  = (w.startJornada || w.endJornada) ? ` · J${w.startJornada ?? '?'}–J${w.endJornada ?? '?'}` : '';
+      info.style.cssText = 'font-size:12px;color:var(--text)';
+      info.textContent = dateStr + jorStr;
+      const del = document.createElement('button');
+      del.className = 'pc-btn sell';
+      del.style.cssText = 'font-size:11px;padding:3px 8px';
+      del.textContent = '✕';
+      del.onclick = () => { windows.splice(i, 1); renderWindows(); };
+      card.appendChild(info);
+      card.appendChild(del);
+      windowsList.appendChild(card);
+    });
+  };
+  renderWindows();
+
+  const addWindowBtn = document.createElement('button');
+  addWindowBtn.className = 'modal-close';
+  addWindowBtn.style.cssText = 'font-size:12px;padding:6px 12px;margin-bottom:8px;background:var(--bg4);color:var(--text);border:1px solid var(--border)';
+  addWindowBtn.textContent = '+ Añadir ventana';
+  sec.appendChild(addWindowBtn);
+
+  const addForm = document.createElement('div');
+  addForm.style.cssText = 'display:none;background:var(--bg4);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px;margin-bottom:8px';
+
+  const wStartDate = textInput('', { type: 'date' });
+  const wEndDate   = textInput('', { type: 'date' });
+  const wStartJor  = textInput('', { type: 'number', min: 1, max: 99, placeholder: 'Opcional' });
+  const wEndJor    = textInput('', { type: 'number', min: 1, max: 99, placeholder: 'Opcional' });
+  addForm.appendChild(inputRow('Fecha inicio', wStartDate));
+  addForm.appendChild(inputRow('Fecha fin', wEndDate));
+  addForm.appendChild(inputRow('Jornada inicio', wStartJor));
+  addForm.appendChild(inputRow('Jornada fin', wEndJor));
+
+  const wErrEl = document.createElement('div');
+  wErrEl.style.cssText = 'font-size:11px;color:var(--danger);margin-bottom:6px';
+  addForm.appendChild(wErrEl);
+
+  const wAddBtn = document.createElement('button');
+  wAddBtn.className = 'modal-close';
+  wAddBtn.style.cssText = 'font-size:12px;padding:6px 12px;background:rgba(0,230,118,0.12);color:var(--accent);border:1px solid rgba(0,230,118,0.3)';
+  wAddBtn.textContent = 'Añadir';
+  wAddBtn.onclick = () => {
+    wErrEl.textContent = '';
+    const sd = wStartDate.value;
+    const ed = wEndDate.value;
+    if (!sd) { wErrEl.textContent = 'La fecha de inicio es obligatoria'; return; }
+    if (!ed) { wErrEl.textContent = 'La fecha de fin es obligatoria'; return; }
+    if (ed < sd) { wErrEl.textContent = 'La fecha de fin debe ser posterior a la de inicio'; return; }
+    windows.push({
+      startDate:    sd,
+      endDate:      ed,
+      startJornada: wStartJor.value ? Number(wStartJor.value) : null,
+      endJornada:   wEndJor.value   ? Number(wEndJor.value)   : null,
+    });
+    wStartDate.value = ''; wEndDate.value = ''; wStartJor.value = ''; wEndJor.value = '';
+    addForm.style.display = 'none';
+    addWindowBtn.style.display = '';
+    renderWindows();
+  };
+  addForm.appendChild(wAddBtn);
+  sec.appendChild(addForm);
+
+  addWindowBtn.onclick = () => {
+    addForm.style.display = 'block';
+    addWindowBtn.style.display = 'none';
+  };
+
+  // maxStolenPerTeam
+  const stolenInput = textInput(league.maxStolenPerTeam ?? '', { type: 'number', min: 1, max: 20, placeholder: 'Sin límite' });
+  sec.appendChild(inputRow('Máx. jugadores robables por equipo por ventana (vacío = sin límite)', stolenInput));
+
   const btn = saveBtn();
   btn.onclick = async () => {
     btn.disabled = true;
     try {
+      const val = stolenInput.value.trim();
       const fields = {
-        antiRobo:      arCheck.checked,
-        antiRoboFee:   Number(arFeeInput.value) || 75,
-        antiRoboLimit: arLimitInput.value.trim() ? Number(arLimitInput.value) : null,
+        antiRobo:         arCheck.checked,
+        antiRoboFee:      Number(arFeeInput.value) || 75,
+        antiRoboLimit:    arLimitInput.value.trim() ? Number(arLimitInput.value) : null,
+        clauseWindows:    windows,
+        maxStolenPerTeam: val ? Number(val) : null,
       };
       await updateLeague(league.code, fields);
       Object.assign(league, fields);
