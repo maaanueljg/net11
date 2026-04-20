@@ -86,7 +86,8 @@ function updateList(listWrap, ctx) {
 
   players.forEach(p => {
     const alreadyOwned = teamIds.has(p.id);
-    const canBuy       = !alreadyOwned && teamState.budget >= p.val;
+    const balance      = teamState.money ?? teamState.budget;
+    const canBuy       = !alreadyOwned && balance >= p.val;
     const card = buildPlayerCard(p, false, {
       onBuy:        () => buyPlayer(p.id, ctx),
       onSell:       () => {},

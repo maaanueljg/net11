@@ -114,7 +114,7 @@ export function render(wrap, ctx) {
 
   if (activePlayers.length === 0) {
     const balance = teamState.money ?? teamState.budget;
-    plantilla.innerHTML = `<div class="plantilla-empty">Toca un hueco en el campo<br>o ve al <strong>Mercado</strong> para fichar.<br><br>💡 Presupuesto: <strong>${balance.toLocaleString('es-ES')} €</strong></div>`;
+    plantilla.innerHTML = `<div class="plantilla-empty">Toca un hueco en el campo<br>o ve al <strong>Mercado</strong> para fichar.<br><br>💡 Presupuesto: <strong>${(balance * 1_000_000).toLocaleString('es-ES')} €</strong></div>`;
   } else {
     activePlayers.forEach(({ player, idx }) => {
       const card = buildPlayerCard(player, true, {
@@ -146,7 +146,7 @@ async function removePlayer(idx, ctx) {
   window.NET11.ctx.teamState = newState;
   ctx.teamState = newState;
   await saveTeam(user.uid, league.code, newState);
-  showToast(`🔴 ${p.name} vendido · +${p.val}M€`, 'error');
+  showToast(`🔴 ${p.name} vendido · +${(p.val * 1_000_000).toLocaleString('es-ES')} €`, 'error');
   window.NET11.refresh();
 }
 
@@ -186,6 +186,6 @@ export async function buyPlayer(pid, ctx) {
   ctx.teamState = newState;
   window.NET11.activeSlot = null;
   await saveTeam(user.uid, league.code, newState);
-  showToast(`✅ ${p.name} fichado · -${p.val}M€`);
+  showToast(`✅ ${p.name} fichado · -${(p.val * 1_000_000).toLocaleString('es-ES')} €`);
   window.NET11.switchTab('equipo');
 }

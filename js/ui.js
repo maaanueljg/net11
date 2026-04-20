@@ -15,7 +15,7 @@ export function updateHeader({ budget, teamCount, pts, formation, money }) {
   const balance = money ?? budget;
   const budgetEl = document.getElementById('budget-display');
   if (budgetEl) {
-    budgetEl.textContent = balance.toLocaleString('es-ES') + ' €';
+    budgetEl.textContent = (balance * 1_000_000).toLocaleString('es-ES') + ' €';
     budgetEl.className = 'amount ' + (balance < 10 ? 'low' : 'ok');
   }
   const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
@@ -54,7 +54,7 @@ export function buildPlayerCard(p, inTeam, { onBuy, onSell, canBuy, alreadyOwned
       </div>
     </div>
     <div class="pc-right">
-      <div class="pc-value">${p.val}M</div>
+      <div class="pc-value">${(p.val * 1_000_000).toLocaleString('es-ES')} €</div>
       ${btnHtml}
     </div>`;
 
