@@ -113,7 +113,8 @@ export function render(wrap, ctx) {
   const activePlayers = team.map((id, idx) => id ? { player: getPlayer(id), idx } : null).filter(Boolean);
 
   if (activePlayers.length === 0) {
-    plantilla.innerHTML = `<div class="plantilla-empty">Toca un hueco en el campo<br>o ve al <strong>Mercado</strong> para fichar.<br><br>💡 Presupuesto: <strong>${budget}M€</strong></div>`;
+    const balance = teamState.money ?? teamState.budget;
+    plantilla.innerHTML = `<div class="plantilla-empty">Toca un hueco en el campo<br>o ve al <strong>Mercado</strong> para fichar.<br><br>💡 Presupuesto: <strong>${balance.toFixed(1)}M€</strong></div>`;
   } else {
     activePlayers.forEach(({ player, idx }) => {
       const card = buildPlayerCard(player, true, {
