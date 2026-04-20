@@ -26,6 +26,37 @@ export const FORMATIONS = {
     {pos:"MED",r:3,c:1},{pos:"MED",r:3,c:2},{pos:"MED",r:3,c:3},{pos:"MED",r:3,c:4},{pos:"MED",r:3,c:5},
     {pos:"DEL",r:4,c:2},{pos:"DEL",r:4,c:4},
   ],
+  "4-2-3-1": [
+    {pos:"POR",r:1,c:3},
+    {pos:"DEF",r:2,c:1},{pos:"DEF",r:2,c:2},{pos:"DEF",r:2,c:4},{pos:"DEF",r:2,c:5},
+    {pos:"MED",r:3,c:2},{pos:"MED",r:3,c:4},
+    {pos:"MED",r:4,c:1},{pos:"MED",r:4,c:3},{pos:"MED",r:4,c:5},
+    {pos:"DEL",r:5,c:3},
+  ],
+  "4-5-1": [
+    {pos:"POR",r:1,c:3},
+    {pos:"DEF",r:2,c:1},{pos:"DEF",r:2,c:2},{pos:"DEF",r:2,c:4},{pos:"DEF",r:2,c:5},
+    {pos:"MED",r:3,c:1},{pos:"MED",r:3,c:2},{pos:"MED",r:3,c:3},{pos:"MED",r:3,c:4},{pos:"MED",r:3,c:5},
+    {pos:"DEL",r:4,c:3},
+  ],
+  "5-3-2": [
+    {pos:"POR",r:1,c:3},
+    {pos:"DEF",r:2,c:1},{pos:"DEF",r:2,c:2},{pos:"DEF",r:2,c:3},{pos:"DEF",r:2,c:4},{pos:"DEF",r:2,c:5},
+    {pos:"MED",r:3,c:2},{pos:"MED",r:3,c:3},{pos:"MED",r:3,c:4},
+    {pos:"DEL",r:4,c:2},{pos:"DEL",r:4,c:4},
+  ],
+  "3-4-3": [
+    {pos:"POR",r:1,c:3},
+    {pos:"DEF",r:2,c:2},{pos:"DEF",r:2,c:3},{pos:"DEF",r:2,c:4},
+    {pos:"MED",r:3,c:1},{pos:"MED",r:3,c:2},{pos:"MED",r:3,c:4},{pos:"MED",r:3,c:5},
+    {pos:"DEL",r:4,c:1},{pos:"DEL",r:4,c:3},{pos:"DEL",r:4,c:5},
+  ],
+  "5-4-1": [
+    {pos:"POR",r:1,c:3},
+    {pos:"DEF",r:2,c:1},{pos:"DEF",r:2,c:2},{pos:"DEF",r:2,c:3},{pos:"DEF",r:2,c:4},{pos:"DEF",r:2,c:5},
+    {pos:"MED",r:3,c:1},{pos:"MED",r:3,c:2},{pos:"MED",r:3,c:4},{pos:"MED",r:3,c:5},
+    {pos:"DEL",r:4,c:3},
+  ],
 };
 
 export const PLAYERS = [

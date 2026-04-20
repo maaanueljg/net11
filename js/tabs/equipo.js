@@ -30,7 +30,8 @@ export function render(wrap, ctx) {
 
   const bar = document.createElement('div');
   bar.className = 'formation-bar';
-  Object.keys(FORMATIONS).forEach(f => {
+  const allowedFormations = league.formations || Object.keys(FORMATIONS);
+  allowedFormations.filter(f => FORMATIONS[f]).forEach(f => {
     const btn = document.createElement('button');
     btn.className = 'fmbtn' + (formation === f ? ' active' : '');
     btn.textContent = f;
