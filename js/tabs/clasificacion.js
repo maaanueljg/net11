@@ -7,11 +7,80 @@ import {
   doc, getDoc, onSnapshot,
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
-const MEDALS = ['🥇', '🥈', '🥉'];
-const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MEDALS     = ['🥇', '🥈', '🥉'];
+const MONTHS     = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MONTHS_S   = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+/* ── Animation helpers ───────────────────────────────────── */
+
+function ensureAnim() {
+  if (document.getElementById('cls-anim')) return;
+  const s = document.createElement('style');
+  s.id = 'cls-anim';
+  s.textContent = '@keyframes cls-fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}';
+  document.head.appendChild(s);
+}
+
+function fadeIn(el) {
+  el.style.animation = 'none';
+  el.offsetHeight; // force reflow
+  el.style.animation = 'cls-fade 0.22s ease';
+}
+
+/* ── Chip bar helper ─────────────────────────────────────── */
+
+function buildChipBar(items, activeIdx, onChange) {
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;gap:6px;padding:8px 16px 12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch';
+
+  let activeBtn = null;
+  items.forEach((item, i) => {
+    const btn = document.createElement('button');
+    btn.className = `filter-chip${i === activeIdx ? ' active-all' : ''}`;
+    btn.style.cssText = 'flex-shrink:0';
+    btn.textContent = item.label;
+    btn.onclick = () => {
+      if (activeBtn) activeBtn.className = 'filter-chip';
+      btn.className = 'filter-chip active-all';
+      activeBtn = btn;
+      onChange(i, item);
+    };
+    bar.appendChild(btn);
+    if (i === activeIdx) {
+      activeBtn = btn;
+      requestAnimationFrame(() => btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }));
+    }
+  });
+
+  return bar;
+}
+
+/* ── Rank list renderer ──────────────────────────────────── */
+
+function buildRankList(entries, myUid) {
+  const frag = document.createDocumentFragment();
+  entries.forEach((e, i) => {
+    const item = document.createElement('div');
+    item.className = `rank-item${e.uid === myUid ? ' me' : ''}`;
+    item.innerHTML = `
+      <div class="rank-num" style="color:${i===0?'var(--gold)':i===1?'#aaa':i===2?'#cd7f32':'var(--muted)'}">
+        ${MEDALS[i] || i + 1}
+      </div>
+      <div class="rank-info">
+        <div class="rank-user${e.uid === myUid ? ' me-label' : ''}">${e.teamName}${e.uid === myUid ? ' <small style="color:var(--muted);font-size:11px">(Tú)</small>' : ''}</div>
+        ${e.sub ? `<div class="rank-team">${e.sub}</div>` : ''}
+      </div>
+      <div class="rank-pts">${e.pts.toLocaleString()}</div>`;
+    frag.appendChild(item);
+  });
+  return frag;
+}
+
+/* ── Main render ─────────────────────────────────────────── */
 
 export function render(wrap, ctx) {
   const { user, profile, league } = ctx;
+  ensureAnim();
 
   if (!user || !profile) {
     wrap.innerHTML = `<div class="plantilla-empty" style="margin:24px 16px">Inicia sesión para ver la clasificación.</div>`;
@@ -60,7 +129,7 @@ export function render(wrap, ctx) {
   let subUnsub  = null;
 
   const tabBar   = document.createElement('div');
-  tabBar.style.cssText = 'display:flex;border-bottom:1px solid var(--border);margin:0 16px 4px';
+  tabBar.style.cssText = 'display:flex;border-bottom:1px solid var(--border);margin:0 16px 0';
 
   const contentEl = document.createElement('div');
 
@@ -68,14 +137,14 @@ export function render(wrap, ctx) {
     if (subUnsub) { subUnsub(); subUnsub = null; }
     activeKey = key;
     tabBar.querySelectorAll('.cls-tab').forEach(b => {
-      const isActive = b.dataset.key === key;
-      b.style.borderBottom = isActive ? '2px solid var(--accent)' : '2px solid transparent';
-      b.style.color        = isActive ? 'var(--accent)' : 'var(--muted)';
+      const on = b.dataset.key === key;
+      b.style.borderBottom = on ? '2px solid var(--accent)' : '2px solid transparent';
+      b.style.color        = on ? 'var(--accent)' : 'var(--muted)';
     });
     contentEl.innerHTML = '';
-    if (key === 'jornada')       renderJornadaTab(contentEl, ctx);
-    else if (key === 'general')  subUnsub = renderGeneralTab(contentEl, ctx);
-    else if (key === 'mensual')  renderMensualTab(contentEl, ctx);
+    if (key === 'jornada')      renderJornadaTab(contentEl, ctx);
+    else if (key === 'general') subUnsub = renderGeneralTab(contentEl, ctx);
+    else if (key === 'mensual') renderMensualTab(contentEl, ctx);
   };
 
   SUB_TABS.forEach(({ key, label }) => {
@@ -83,14 +152,13 @@ export function render(wrap, ctx) {
     btn.dataset.key = key;
     btn.className = 'cls-tab';
     btn.textContent = label;
-    btn.style.cssText = `flex:1;padding:10px 0;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-family:var(--font-body);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.18s`;
+    btn.style.cssText = 'flex:1;padding:10px 0;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-family:var(--font-body);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.18s';
     btn.onclick = () => switchSub(key);
     tabBar.appendChild(btn);
   });
 
   wrap.appendChild(tabBar);
   wrap.appendChild(contentEl);
-
   switchSub(activeKey);
 
   return () => { if (subUnsub) subUnsub(); };
@@ -100,33 +168,16 @@ export function render(wrap, ctx) {
 
 function renderJornadaTab(el, ctx) {
   const { user, league } = ctx;
-  let selectedJornada = league.currentJornada ?? 1;
-  const maxJornada    = league.currentJornada ?? 1;
+  const maxJornada = league.currentJornada ?? 1;
 
-  const navEl  = document.createElement('div');
-  navEl.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 16px 14px';
+  // Build chip items: J1 … Jmax
+  const items = Array.from({ length: maxJornada }, (_, i) => ({ label: `J${i + 1}`, num: i + 1 }));
+  const startIdx = maxJornada - 1;
+
   const listEl = document.createElement('div');
   listEl.style.padding = '0 16px';
-  el.appendChild(navEl);
-  el.appendChild(listEl);
-
-  const btnStyle = 'background:none;border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 12px;color:var(--text);cursor:pointer;font-family:var(--font-body);font-size:12px';
-  const prevBtn  = Object.assign(document.createElement('button'), { textContent: '← Ant.' });
-  const nextBtn  = Object.assign(document.createElement('button'), { textContent: 'Sig. →' });
-  prevBtn.style.cssText = nextBtn.style.cssText = btnStyle;
-
-  const jorLabel = document.createElement('div');
-  jorLabel.style.cssText = 'font-weight:700;font-size:14px;color:var(--text)';
-
-  navEl.appendChild(prevBtn);
-  navEl.appendChild(jorLabel);
-  navEl.appendChild(nextBtn);
 
   const load = async (num) => {
-    selectedJornada = num;
-    jorLabel.textContent = `Jornada ${num}`;
-    prevBtn.disabled = num <= 1;
-    nextBtn.disabled = num >= maxJornada;
     listEl.innerHTML = '<div class="plantilla-empty">Cargando...</div>';
 
     let jornadaDoc = null;
@@ -137,11 +188,11 @@ function renderJornadaTab(el, ctx) {
 
     if (!jornadaDoc) {
       listEl.innerHTML = '<div class="plantilla-empty">Jornada no publicada aún.</div>';
+      fadeIn(listEl);
       return;
     }
 
     const scoringMode = league.scoringMode || 'base';
-
     const teamData = await Promise.all(
       league.members.map(async uid => {
         try {
@@ -162,24 +213,14 @@ function renderJornadaTab(el, ctx) {
       .sort((a, b) => b.pts - a.pts);
 
     listEl.innerHTML = '';
-    entries.forEach((e, i) => {
-      const item = document.createElement('div');
-      item.className = `rank-item${e.uid === user.uid ? ' me' : ''}`;
-      item.innerHTML = `
-        <div class="rank-num" style="color:${i===0?'var(--gold)':i===1?'#aaa':i===2?'#cd7f32':'var(--muted)'}">
-          ${MEDALS[i] || i + 1}
-        </div>
-        <div class="rank-info">
-          <div class="rank-user${e.uid === user.uid ? ' me-label' : ''}">${e.teamName}${e.uid === user.uid ? ' <small style="color:var(--muted);font-size:11px">(Tú)</small>' : ''}</div>
-        </div>
-        <div class="rank-pts">${e.pts.toLocaleString()}</div>`;
-      listEl.appendChild(item);
-    });
+    listEl.appendChild(buildRankList(entries, user.uid));
+    fadeIn(listEl);
   };
 
-  prevBtn.onclick = () => load(selectedJornada - 1);
-  nextBtn.onclick = () => load(selectedJornada + 1);
-  load(selectedJornada);
+  const bar = buildChipBar(items, startIdx, (_, item) => load(item.num));
+  el.appendChild(bar);
+  el.appendChild(listEl);
+  load(maxJornada);
 }
 
 /* ── General tab ─────────────────────────────────────────── */
@@ -218,12 +259,13 @@ function renderGeneralTab(el, ctx) {
       .map(({ uid, data }) => ({
         uid,
         teamName: league.memberNames[uid] || '—',
-        totalPts: data?.totalPts ?? 0,
+        pts:      data?.totalPts ?? 0,
+        sub:      uid.slice(0, 8) + '…',
       }))
-      .sort((a, b) => b.totalPts - a.totalPts);
+      .sort((a, b) => b.pts - a.pts);
 
     const myPos = entries.findIndex(e => e.uid === user.uid) + 1;
-    const myPts = entries.find(e => e.uid === user.uid)?.totalPts ?? 0;
+    const myPts = entries.find(e => e.uid === user.uid)?.pts ?? 0;
 
     const rpos = hero.querySelector('#rh-gen-pos');
     const rpts = hero.querySelector('#rh-gen-pts');
@@ -232,20 +274,8 @@ function renderGeneralTab(el, ctx) {
     hero.querySelector('.rh-label').textContent = league.name;
 
     listEl.innerHTML = '';
-    entries.forEach((e, i) => {
-      const item = document.createElement('div');
-      item.className = `rank-item${e.uid === user.uid ? ' me' : ''}`;
-      item.innerHTML = `
-        <div class="rank-num" style="color:${i===0?'var(--gold)':i===1?'#aaa':i===2?'#cd7f32':'var(--muted)'}">
-          ${MEDALS[i] || i + 1}
-        </div>
-        <div class="rank-info">
-          <div class="rank-user${e.uid === user.uid ? ' me-label' : ''}">${e.teamName}${e.uid === user.uid ? ' <small style="color:var(--muted);font-size:11px">(Tú)</small>' : ''}</div>
-          <div class="rank-team">${e.uid.slice(0, 8)}…</div>
-        </div>
-        <div class="rank-pts">${e.totalPts.toLocaleString()}</div>`;
-      listEl.appendChild(item);
-    });
+    listEl.appendChild(buildRankList(entries, user.uid));
+    fadeIn(listEl);
   };
 
   const unsubs = league.members.map(uid =>
@@ -259,34 +289,42 @@ function renderGeneralTab(el, ctx) {
 
 function renderMensualTab(el, ctx) {
   const { user, league } = ctx;
+  const now = new Date();
 
-  const now      = new Date();
-  const monthKey = now.toISOString().slice(0, 7);
-  const label    = `${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+  // Months of the current year up to today
+  const items = Array.from({ length: now.getMonth() + 1 }, (_, i) => ({
+    label:    MONTHS_S[i],
+    monthKey: `${now.getFullYear()}-${String(i + 1).padStart(2, '0')}`,
+    fullName: `${MONTHS[i]} ${now.getFullYear()}`,
+  }));
+
+  const activeIdx = items.length - 1;
 
   const header = document.createElement('div');
-  header.style.cssText = 'padding:10px 16px 14px;font-size:13px;font-weight:700;color:var(--text)';
-  header.textContent = `📆 ${label}`;
-  el.appendChild(header);
+  header.style.cssText = 'padding:2px 16px 0;font-size:13px;font-weight:700;color:var(--text)';
+  header.textContent = items[activeIdx].fullName;
 
   const listEl = document.createElement('div');
   listEl.style.padding = '0 16px';
-  listEl.innerHTML = '<div class="plantilla-empty">Cargando...</div>';
-  el.appendChild(listEl);
 
-  Promise.all(
-    league.members.map(async uid => {
-      try {
-        const snap = await getDoc(doc(db, 'users', uid, 'leagueTeams', league.code));
-        return { uid, data: snap.exists() ? snap.data() : null };
-      } catch { return { uid, data: null }; }
-    })
-  ).then(snapshots => {
+  const loadMonth = async (item) => {
+    header.textContent = item.fullName;
+    listEl.innerHTML = '<div class="plantilla-empty">Cargando...</div>';
+
+    const snapshots = await Promise.all(
+      league.members.map(async uid => {
+        try {
+          const snap = await getDoc(doc(db, 'users', uid, 'leagueTeams', league.code));
+          return { uid, data: snap.exists() ? snap.data() : null };
+        } catch { return { uid, data: null }; }
+      })
+    );
+
     const entries = snapshots
       .map(({ uid, data }) => ({
         uid,
         teamName: league.memberNames[uid] || '—',
-        pts: data?.monthlyPts?.[monthKey] ?? 0,
+        pts:      data?.monthlyPts?.[item.monthKey] ?? 0,
       }))
       .sort((a, b) => b.pts - a.pts);
 
@@ -294,21 +332,17 @@ function renderMensualTab(el, ctx) {
 
     if (!entries.some(e => e.pts > 0)) {
       listEl.innerHTML = '<div class="plantilla-empty">Sin datos para este mes.<br>Los puntos se acumulan al publicar jornadas.</div>';
+      fadeIn(listEl);
       return;
     }
 
-    entries.forEach((e, i) => {
-      const item = document.createElement('div');
-      item.className = `rank-item${e.uid === user.uid ? ' me' : ''}`;
-      item.innerHTML = `
-        <div class="rank-num" style="color:${i===0?'var(--gold)':i===1?'#aaa':i===2?'#cd7f32':'var(--muted)'}">
-          ${MEDALS[i] || i + 1}
-        </div>
-        <div class="rank-info">
-          <div class="rank-user${e.uid === user.uid ? ' me-label' : ''}">${e.teamName}${e.uid === user.uid ? ' <small style="color:var(--muted);font-size:11px">(Tú)</small>' : ''}</div>
-        </div>
-        <div class="rank-pts">${e.pts.toLocaleString()}</div>`;
-      listEl.appendChild(item);
-    });
-  });
+    listEl.appendChild(buildRankList(entries, user.uid));
+    fadeIn(listEl);
+  };
+
+  const bar = buildChipBar(items, activeIdx, (_, item) => loadMonth(item));
+  el.appendChild(header);
+  el.appendChild(bar);
+  el.appendChild(listEl);
+  loadMonth(items[activeIdx]);
 }
