@@ -4,8 +4,7 @@ import { getLeague, joinLeague } from './leagues.js';
 import { showToast } from './ui.js';
 import { render as renderEquipo }  from './tabs/equipo.js';
 import { render as renderMercado } from './tabs/mercado.js';
-import { render as renderRanking } from './tabs/ranking.js';
-import { render as renderJornada } from './tabs/jornada.js';
+import { render as renderClasificacion } from './tabs/clasificacion.js';
 import { render as renderPerfil }  from './tabs/perfil.js';
 import { render as renderLiga }   from './tabs/liga.js';
 
@@ -23,8 +22,8 @@ window.NET11 = {
   updateLigaNav: () => updateLigaNav(),
 };
 
-let currentTab = 'equipo';
-let rankingUnsub = null;
+let currentTab        = 'equipo';
+let clasificacionUnsub = null;
 
 function updateLigaNav() {
   const { user, league } = window.NET11.ctx;
@@ -33,19 +32,18 @@ function updateLigaNav() {
 }
 
 function renderCurrentTab() {
-  if (rankingUnsub) { rankingUnsub(); rankingUnsub = null; }
+  if (clasificacionUnsub) { clasificacionUnsub(); clasificacionUnsub = null; }
   const c = document.getElementById('content');
   c.innerHTML = '';
   const wrap = document.createElement('div');
   wrap.className = 'fade-in';
   const ctx = window.NET11.ctx;
 
-  if      (currentTab === 'equipo')  renderEquipo(wrap, ctx);
-  else if (currentTab === 'mercado') renderMercado(wrap, ctx);
-  else if (currentTab === 'ranking') { rankingUnsub = renderRanking(wrap, ctx); }
-  else if (currentTab === 'jornada') renderJornada(wrap, ctx).catch(console.error);
-  else if (currentTab === 'perfil')  renderPerfil(wrap, ctx);
-  else if (currentTab === 'liga')    renderLiga(wrap, ctx).catch(console.error);
+  if      (currentTab === 'equipo')         renderEquipo(wrap, ctx);
+  else if (currentTab === 'mercado')        renderMercado(wrap, ctx);
+  else if (currentTab === 'clasificacion')  { clasificacionUnsub = renderClasificacion(wrap, ctx); }
+  else if (currentTab === 'perfil')         renderPerfil(wrap, ctx);
+  else if (currentTab === 'liga')           renderLiga(wrap, ctx).catch(console.error);
 
   c.appendChild(wrap);
 }

@@ -202,7 +202,9 @@ window.publishJornada = async () => {
 
           const leagueData  = leagueCache[leagueCode];
           const moneyEarned = (leagueData.moneyPerPoint ?? 0) * totalPts;
-          const teamData    = { totalPts };
+          const monthKey    = new Date().toISOString().slice(0, 7);
+          const prevMonthly = teamSnap.data().monthlyPts?.[monthKey] ?? 0;
+          const teamData    = { totalPts, [`monthlyPts.${monthKey}`]: prevMonthly + totalPts };
           if (moneyEarned > 0) {
             teamData.money = (teamSnap.data().money ?? (leagueData.startingMoney ?? 100)) + moneyEarned;
           }
