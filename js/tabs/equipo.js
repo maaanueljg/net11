@@ -53,14 +53,14 @@ export function render(wrap, ctx) {
   const pitchWrap = document.createElement('div');
   pitchWrap.className = 'pitch-wrap';
   pitchWrap.innerHTML = `
-    <svg class="field-lines" viewBox="0 0 300 220" preserveAspectRatio="none"
+    <svg class="field-lines" viewBox="0 0 200 320" preserveAspectRatio="none"
       xmlns="http://www.w3.org/2000/svg"
       style="position:absolute;inset:0;width:100%;height:100%;opacity:0.07">
-      <rect x="30" y="10" width="240" height="200" rx="2" fill="none" stroke="white" stroke-width="1"/>
-      <line x1="30" y1="110" x2="270" y2="110" stroke="white" stroke-width="1"/>
-      <circle cx="150" cy="110" r="28" fill="none" stroke="white" stroke-width="1"/>
-      <rect x="100" y="10" width="100" height="30" fill="none" stroke="white" stroke-width="1"/>
-      <rect x="100" y="180" width="100" height="30" fill="none" stroke="white" stroke-width="1"/>
+      <rect x="10" y="10" width="180" height="300" rx="2" fill="none" stroke="white" stroke-width="1.5"/>
+      <line x1="10" y1="160" x2="190" y2="160" stroke="white" stroke-width="1"/>
+      <circle cx="100" cy="160" r="26" fill="none" stroke="white" stroke-width="1"/>
+      <rect x="55" y="10" width="90" height="42" fill="none" stroke="white" stroke-width="1"/>
+      <rect x="55" y="268" width="90" height="42" fill="none" stroke="white" stroke-width="1"/>
     </svg>`;
 
   const POS_COLOR = { POR:'var(--por)', DEF:'var(--def)', MED:'var(--med)', DEL:'var(--del)' };
@@ -70,7 +70,7 @@ export function render(wrap, ctx) {
   const dragAbort = new AbortController();
 
   const grid = document.createElement('div');
-  grid.style.cssText = 'position:relative;width:100%;min-height:280px';
+  grid.style.cssText = 'position:relative;width:100%;min-height:380px';
 
   slots.forEach((slot, idx) => {
     const player   = team[idx] ? getPlayer(team[idx]) : null;
@@ -108,9 +108,11 @@ export function render(wrap, ctx) {
           () => moveToBench(idx, ctx),
         )
       : () => {
-          window.NET11.activeSlot = { pos: slot.pos, idx };
-          window.NET11.switchTab('mercado');
-          showToast(`Selecciona un ${slot.pos} en el mercado`, 'warn');
+          const benchOfPos = bench.filter(pid => {
+            const p = getPlayer(pid);
+            return p && p.pos === slot.pos;
+          });
+          showEmptySlotMenu(slotEl, slot.pos, idx, benchOfPos, ctx);
         };
 
     makeDraggable(slotEl, idx, positions, user.uid, league.code, formation, onTap, dragAbort.signal);
@@ -131,7 +133,7 @@ export function render(wrap, ctx) {
 
   const plantTitle = document.createElement('div');
   plantTitle.className = 'sec-title';
-  plantTitle.innerHTML = '📋 PLANTILLA <span>COMPLETA</span>';
+  plantTitle.innerHTML = '📋 <span>PLANTILLA</span>';
   wrap.appendChild(plantTitle);
 
   const filterBar = document.createElement('div');
@@ -371,6 +373,94 @@ async function moveToBench(idx, ctx) {
   ctx.teamState = newState;
   await saveTeam(user.uid, league.code, newState);
   showToast(`🪑 ${p.name} enviado al banquillo`);
+  window.NET11.refresh();
+}
+
+function showEmptySlotMenu(slotEl, pos, slotIdx, benchPlayers, ctx) {
+  document.querySelector('.slot-menu')?.remove();
+  const rect = slotEl.getBoundingClientRect();
+  const menu = document.createElement('div');
+  menu.className = 'slot-menu';
+  menu.style.cssText = `position:fixed;left:${rect.left + rect.width / 2}px;top:${rect.top - 8}px;transform:translate(-50%,-100%);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:200;min-width:160px`;
+
+  let closeListener = null;
+  const removeMenu = () => {
+    menu.remove();
+    if (closeListener) document.removeEventListener('pointerdown', closeListener);
+  };
+
+  const mkBtn = (text, bg, color, disabled, cb) => {
+    const b = document.createElement('button');
+    b.style.cssText = `padding:8px 12px;border:none;border-radius:7px;background:${bg};color:${color};font-family:var(--font-body);font-size:13px;font-weight:600;cursor:${disabled ? 'not-allowed' : 'pointer'};text-align:left;opacity:${disabled ? '0.4' : '1'}`;
+    b.textContent = text;
+    if (!disabled) b.onclick = (e) => { e.stopPropagation(); removeMenu(); cb(); };
+    return b;
+  };
+
+  const hasBench = benchPlayers.length > 0;
+  menu.appendChild(mkBtn(
+    hasBench ? '🪑 Del banquillo' : '🪑 Del banquillo (vacío)',
+    'rgba(255,255,255,0.05)', 'var(--text)', !hasBench,
+    () => showBenchPicker(slotEl, slotIdx, benchPlayers, ctx),
+  ));
+  menu.appendChild(mkBtn(
+    '💰 Ir al mercado',
+    'rgba(0,230,118,0.1)', 'var(--accent)', false,
+    () => {
+      window.NET11.activeSlot = { pos, idx: slotIdx };
+      window.NET11.switchTab('mercado');
+      showToast(`Selecciona un ${pos} en el mercado`, 'warn');
+    },
+  ));
+
+  document.body.appendChild(menu);
+  setTimeout(() => {
+    closeListener = (e) => { if (!menu.contains(e.target)) removeMenu(); };
+    document.addEventListener('pointerdown', closeListener);
+  }, 0);
+}
+
+function showBenchPicker(slotEl, slotIdx, benchPlayers, ctx) {
+  document.querySelector('.slot-menu')?.remove();
+  const rect = slotEl.getBoundingClientRect();
+  const menu = document.createElement('div');
+  menu.className = 'slot-menu';
+  menu.style.cssText = `position:fixed;left:${rect.left + rect.width / 2}px;top:${rect.top - 8}px;transform:translate(-50%,-100%);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:200;min-width:160px;max-height:200px;overflow-y:auto`;
+
+  let closeListener = null;
+  const removeMenu = () => {
+    menu.remove();
+    if (closeListener) document.removeEventListener('pointerdown', closeListener);
+  };
+
+  benchPlayers.forEach(pid => {
+    const p = getPlayer(pid);
+    if (!p) return;
+    const b = document.createElement('button');
+    b.style.cssText = `padding:8px 12px;border:none;border-radius:7px;background:rgba(255,255,255,0.05);color:var(--text);font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;text-align:left`;
+    b.textContent = `${p.emoji} ${p.name.split(' ').pop()}`;
+    b.onclick = (e) => { e.stopPropagation(); removeMenu(); moveBenchToSlot(slotIdx, pid, ctx); };
+    menu.appendChild(b);
+  });
+
+  document.body.appendChild(menu);
+  setTimeout(() => {
+    closeListener = (e) => { if (!menu.contains(e.target)) removeMenu(); };
+    document.addEventListener('pointerdown', closeListener);
+  }, 0);
+}
+
+async function moveBenchToSlot(slotIdx, pid, ctx) {
+  const { user, league, teamState } = ctx;
+  const p = getPlayer(pid);
+  const newTeam = [...teamState.team];
+  newTeam[slotIdx] = pid;
+  const newBench = (teamState.bench || []).filter(id => id !== pid);
+  const newState = { ...teamState, team: newTeam, bench: newBench, totalPts: calcTotalPts(newTeam) };
+  window.NET11.ctx.teamState = newState;
+  ctx.teamState = newState;
+  await saveTeam(user.uid, league.code, newState);
+  showToast(`✅ ${p.name} al once inicial`);
   window.NET11.refresh();
 }
 
