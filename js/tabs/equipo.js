@@ -63,18 +63,21 @@ export function render(wrap, ctx) {
       <rect x="100" y="180" width="100" height="30" fill="none" stroke="white" stroke-width="1"/>
     </svg>`;
 
-  const grid = document.createElement('div');
-  grid.className = 'pitch-grid';
   const POS_COLOR = { POR:'var(--por)', DEF:'var(--def)', MED:'var(--med)', DEL:'var(--del)' };
-  const maxRow = Math.max(...slots.map(s => s.r));
+  const defaults  = defaultPositions(slots);
+  const positions = loadPositions(user.uid, league.code, formation) || defaults;
+
+  const grid = document.createElement('div');
+  grid.style.cssText = 'position:relative;width:100%;min-height:260px';
 
   slots.forEach((slot, idx) => {
     const player   = team[idx] ? getPlayer(team[idx]) : null;
     const posColor = POS_COLOR[slot.pos];
-    const slotEl   = document.createElement('div');
+    const pos      = positions[idx] ?? defaults[idx];
+
+    const slotEl = document.createElement('div');
     slotEl.className = 'slot';
-    slotEl.style.gridColumn = slot.c;
-    slotEl.style.gridRow    = (maxRow + 1) - slot.r;
+    slotEl.style.cssText = `position:absolute;left:${pos.x}%;top:${pos.y}%;transform:translate(-50%,-50%);touch-action:none`;
 
     if (player) {
       slotEl.innerHTML = `
@@ -84,7 +87,6 @@ export function render(wrap, ctx) {
         </div>
         <div class="slot-name">${player.name.split(' ').pop()}</div>
         <div class="slot-pts" style="color:${posColor}">${player.pts}p</div>`;
-      slotEl.onclick = () => removePlayer(idx, ctx);
     } else {
       const isActive = window.NET11.activeSlot?.idx === idx;
       slotEl.innerHTML = `
@@ -99,10 +101,20 @@ export function render(wrap, ctx) {
         showToast(`Selecciona un ${slot.pos} en el mercado`, 'warn');
       };
     }
+
     grid.appendChild(slotEl);
   });
 
   pitchWrap.appendChild(grid);
+
+  const resetBtn = document.createElement('button');
+  resetBtn.style.cssText = 'position:absolute;bottom:8px;right:10px;background:none;border:none;color:rgba(255,255,255,0.3);font-size:11px;cursor:pointer;font-family:var(--font-body);padding:4px 6px';
+  resetBtn.textContent = '↺ Resetear';
+  resetBtn.onclick = () => {
+    localStorage.removeItem(`net11_pos_${user.uid}_${league.code}_${formation}`);
+    window.NET11.refresh();
+  };
+  pitchWrap.appendChild(resetBtn);
   wrap.appendChild(pitchWrap);
 
   const plantTitle = document.createElement('div');
@@ -234,6 +246,26 @@ async function removeBenchPlayer(idx, ctx) {
   await saveTeam(user.uid, league.code, newState);
   showToast(`🔴 ${p.name} vendido · +${(p.val * 1_000_000).toLocaleString('es-ES')} €`, 'error');
   window.NET11.refresh();
+}
+
+function defaultPositions(slots) {
+  const maxCol = Math.max(...slots.map(s => s.c));
+  const maxRow = Math.max(...slots.map(s => s.r));
+  return slots.map(slot => ({
+    x: maxCol > 1 ? ((slot.c - 1) / (maxCol - 1)) * 85 + 7.5 : 50,
+    y: maxRow > 1 ? ((maxRow - slot.r) / (maxRow - 1)) * 80 + 10 : 50,
+  }));
+}
+
+function loadPositions(uid, leagueCode, form) {
+  try {
+    const raw = localStorage.getItem(`net11_pos_${uid}_${leagueCode}_${form}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function savePositions(uid, leagueCode, form, positions) {
+  localStorage.setItem(`net11_pos_${uid}_${leagueCode}_${form}`, JSON.stringify(positions));
 }
 
 export async function buyPlayer(pid, ctx) {
