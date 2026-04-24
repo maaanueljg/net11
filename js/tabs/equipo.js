@@ -95,11 +95,6 @@ export function render(wrap, ctx) {
           ${isActive ? '★' : '+'}
         </div>
         <div class="slot-name" style="color:${posColor}88">${slot.pos}</div>`;
-      slotEl.onclick = () => {
-        window.NET11.activeSlot = { pos: slot.pos, idx };
-        window.NET11.switchTab('mercado');
-        showToast(`Selecciona un ${slot.pos} en el mercado`, 'warn');
-      };
     }
 
     grid.appendChild(slotEl);
