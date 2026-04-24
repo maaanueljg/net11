@@ -34,6 +34,7 @@ function updateLigaNav() {
 function renderCurrentTab() {
   if (clasificacionUnsub) { clasificacionUnsub(); clasificacionUnsub = null; }
   const c = document.getElementById('content');
+  c.querySelector('.pitch-wrap')?._cleanup?.();
   c.innerHTML = '';
   const wrap = document.createElement('div');
   wrap.className = 'fade-in';
