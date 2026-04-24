@@ -67,6 +67,8 @@ export function render(wrap, ctx) {
   const defaults  = defaultPositions(slots);
   const positions = loadPositions(user.uid, league.code, formation) || defaults;
 
+  const dragAbort = new AbortController();
+
   const grid = document.createElement('div');
   grid.style.cssText = 'position:relative;width:100%;min-height:280px';
 
@@ -111,7 +113,7 @@ export function render(wrap, ctx) {
           showToast(`Selecciona un ${slot.pos} en el mercado`, 'warn');
         };
 
-    makeDraggable(slotEl, idx, positions, user.uid, league.code, formation, onTap);
+    makeDraggable(slotEl, idx, positions, user.uid, league.code, formation, onTap, dragAbort.signal);
   });
 
   pitchWrap.appendChild(grid);
@@ -124,6 +126,7 @@ export function render(wrap, ctx) {
     window.NET11.refresh();
   };
   pitchWrap.appendChild(resetBtn);
+  pitchWrap._cleanup = () => dragAbort.abort();
   wrap.appendChild(pitchWrap);
 
   const plantTitle = document.createElement('div');
@@ -277,8 +280,9 @@ function savePositions(uid, leagueCode, form, positions) {
   localStorage.setItem(`net11_pos_${uid}_${leagueCode}_${form}`, JSON.stringify(positions));
 }
 
-function makeDraggable(slotEl, idx, positions, uid, leagueCode, form, onTap) {
-  let startX, startY, isDragging = false, tapTimer = null;
+function makeDraggable(slotEl, idx, positions, uid, leagueCode, form, onTap, signal) {
+  let startX = 0, startY = 0, isDragging = false, tapTimer = null;
+  const opts = { signal };
 
   slotEl.addEventListener('pointerdown', (e) => {
     e.preventDefault();
@@ -287,7 +291,7 @@ function makeDraggable(slotEl, idx, positions, uid, leagueCode, form, onTap) {
     isDragging = false;
     slotEl.setPointerCapture(e.pointerId);
     tapTimer = setTimeout(() => { tapTimer = null; }, 150);
-  });
+  }, opts);
 
   slotEl.addEventListener('pointermove', (e) => {
     if (tapTimer !== null) {
@@ -304,24 +308,23 @@ function makeDraggable(slotEl, idx, positions, uid, leagueCode, form, onTap) {
     slotEl.style.left = x + '%';
     slotEl.style.top  = y + '%';
     positions[idx] = { x, y };
-  });
+  }, opts);
 
   slotEl.addEventListener('pointerup', () => {
     if (isDragging) {
       savePositions(uid, leagueCode, form, positions);
       isDragging = false;
-    } else if (tapTimer !== null) {
-      clearTimeout(tapTimer);
-      tapTimer = null;
+    } else {
+      if (tapTimer !== null) { clearTimeout(tapTimer); tapTimer = null; }
       onTap();
     }
-  });
+  }, opts);
 
   slotEl.addEventListener('pointercancel', () => {
     if (isDragging) savePositions(uid, leagueCode, form, positions);
     isDragging = false;
     if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
-  });
+  }, opts);
 }
 
 function showSlotMenu(slotEl, onSell, onBench) {
@@ -331,11 +334,17 @@ function showSlotMenu(slotEl, onSell, onBench) {
   menu.className = 'slot-menu';
   menu.style.cssText = `position:fixed;left:${rect.left + rect.width / 2}px;top:${rect.top - 8}px;transform:translate(-50%,-100%);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:200;min-width:140px`;
 
+  let closeListener = null;
+  const removeMenu = () => {
+    menu.remove();
+    if (closeListener) document.removeEventListener('pointerdown', closeListener);
+  };
+
   const mkBtn = (text, bg, color, cb) => {
     const b = document.createElement('button');
     b.style.cssText = `padding:8px 12px;border:none;border-radius:7px;background:${bg};color:${color};font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;text-align:left`;
     b.textContent = text;
-    b.onclick = (e) => { e.stopPropagation(); menu.remove(); cb(); };
+    b.onclick = (e) => { e.stopPropagation(); removeMenu(); cb(); };
     return b;
   };
 
@@ -344,8 +353,8 @@ function showSlotMenu(slotEl, onSell, onBench) {
   document.body.appendChild(menu);
 
   setTimeout(() => {
-    const close = (e) => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('pointerdown', close); } };
-    document.addEventListener('pointerdown', close);
+    closeListener = (e) => { if (!menu.contains(e.target)) removeMenu(); };
+    document.addEventListener('pointerdown', closeListener);
   }, 0);
 }
 
