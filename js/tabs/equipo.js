@@ -32,23 +32,31 @@ export function render(wrap, ctx) {
   titleEl.innerHTML = `<div class="sec-title">👕 MI <span>EQUIPO</span></div>`;
   wrap.appendChild(titleEl);
 
-  const bar = document.createElement('div');
-  bar.className = 'formation-bar';
-  const allowedFormations = league.formations || Object.keys(FORMATIONS);
-  allowedFormations.filter(f => FORMATIONS[f]).forEach(f => {
-    const btn = document.createElement('button');
-    btn.className = 'fmbtn' + (formation === f ? ' active' : '');
-    btn.textContent = f;
-    btn.onclick = async () => {
-      const newState = { ...teamState, formation: f, team: Array(11).fill(null), totalPts: 0 };
-      ctx.teamState = newState;
-      window.NET11.ctx.teamState = newState;
-      await saveTeam(user.uid, league.code, newState);
-      window.NET11.refresh();
-    };
-    bar.appendChild(btn);
+  const allowedFormations = (league.formations || Object.keys(FORMATIONS)).filter(f => FORMATIONS[f]);
+
+  const formWrap = document.createElement('div');
+  formWrap.style.cssText = 'padding:0 18px 12px';
+
+  const formBtn = document.createElement('button');
+  formBtn.style.cssText = 'width:100%;display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--bg3);border:1px solid rgba(0,230,118,0.2);border-radius:var(--r);cursor:pointer;font-family:var(--font-body)';
+  formBtn.innerHTML = `
+    ${buildMiniPitch(formation)}
+    <div style="flex:1;text-align:left">
+      <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">Formación</div>
+      <div style="font-family:var(--font-head);font-size:22px;color:var(--accent);letter-spacing:2px;line-height:1">${formation}</div>
+    </div>
+    <span style="color:var(--muted);font-size:18px">▾</span>
+  `;
+  formBtn.onclick = () => showFormationDropdown(formBtn, allowedFormations, formation, async (f) => {
+    const newState = { ...teamState, formation: f, team: Array(11).fill(null), totalPts: 0 };
+    ctx.teamState = newState;
+    window.NET11.ctx.teamState = newState;
+    await saveTeam(user.uid, league.code, newState);
+    window.NET11.refresh();
   });
-  wrap.appendChild(bar);
+
+  formWrap.appendChild(formBtn);
+  wrap.appendChild(formWrap);
 
   const pitchWrap = document.createElement('div');
   pitchWrap.className = 'pitch-wrap';
@@ -374,6 +382,66 @@ async function moveToBench(idx, ctx) {
   await saveTeam(user.uid, league.code, newState);
   showToast(`🪑 ${p.name} enviado al banquillo`);
   window.NET11.refresh();
+}
+
+function buildMiniPitch(formation) {
+  const rows = formation.split('-').map(Number);
+  const displayRows = [...rows].reverse(); // attackers first
+  displayRows.push(1); // GK last
+
+  const colors = displayRows.map((_, i) => {
+    if (i === displayRows.length - 1) return '#ffd600'; // GK
+    if (i === 0) return '#ff1744'; // DEL
+    if (i === displayRows.length - 2) return '#00b0ff'; // DEF
+    return '#00e676'; // MID
+  });
+
+  const r = 3.5, gap = 9, rowH = 10;
+  const maxInRow = Math.max(...displayRows);
+  const W = (maxInRow - 1) * gap + 2 * r + 2;
+  const H = (displayRows.length - 1) * rowH + 2 * r + 2;
+
+  let circles = '';
+  displayRows.forEach((count, rowIdx) => {
+    const y = rowIdx * rowH + r + 1;
+    const rowWidth = (count - 1) * gap;
+    const startX = (W - rowWidth) / 2;
+    for (let i = 0; i < count; i++) {
+      circles += `<circle cx="${startX + i * gap}" cy="${y}" r="${r}" fill="${colors[rowIdx]}" opacity="0.85"/>`;
+    }
+  });
+
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">${circles}</svg>`;
+}
+
+function showFormationDropdown(triggerEl, formations, current, onChange) {
+  document.querySelector('.formation-dropdown')?.remove();
+  const rect = triggerEl.getBoundingClientRect();
+  const panel = document.createElement('div');
+  panel.className = 'formation-dropdown';
+  panel.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.bottom + 6}px;width:${rect.width}px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,0.6);animation:fadeIn 0.15s ease;max-height:60vh;overflow-y:auto`;
+
+  let closeListener = null;
+  const removePanel = () => {
+    panel.remove();
+    if (closeListener) document.removeEventListener('pointerdown', closeListener);
+  };
+
+  formations.forEach((f, i) => {
+    const isCurrent = f === current;
+    const item = document.createElement('button');
+    item.style.cssText = `width:100%;display:flex;align-items:center;gap:14px;padding:11px 16px;background:${isCurrent ? 'rgba(0,230,118,0.08)' : 'none'};border:none;${i < formations.length - 1 ? 'border-bottom:1px solid var(--border);' : ''}cursor:pointer;font-family:var(--font-body)`;
+    const check = isCurrent ? `<span style="margin-left:auto;color:var(--accent);font-size:15px;font-weight:700">✓</span>` : '';
+    item.innerHTML = `${buildMiniPitch(f)}<span style="font-family:var(--font-head);font-size:20px;letter-spacing:1.5px;${isCurrent ? 'color:var(--accent)' : 'color:var(--text)'}">${f}</span>${check}`;
+    item.onclick = (e) => { e.stopPropagation(); removePanel(); if (f !== current) onChange(f); };
+    panel.appendChild(item);
+  });
+
+  document.body.appendChild(panel);
+  setTimeout(() => {
+    closeListener = (e) => { if (!panel.contains(e.target) && !triggerEl.contains(e.target)) removePanel(); };
+    document.addEventListener('pointerdown', closeListener);
+  }, 0);
 }
 
 function showEmptySlotMenu(slotEl, pos, slotIdx, benchPlayers, ctx) {
