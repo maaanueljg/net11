@@ -179,7 +179,7 @@ export function render(wrap, ctx) {
     btn.textContent = f;
     btn.onclick = () => {
       if (activeFilterBtn) activeFilterBtn.className = 'filter-chip';
-      btn.className = 'filter-chip active-all';
+      btn.className = `filter-chip ${f === 'Todos' ? 'active-all' : `active-${f.toLowerCase()}`}`;
       activeFilterBtn = btn;
       activeFilter = f;
       renderPlantillaContent();
