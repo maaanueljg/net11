@@ -68,7 +68,7 @@ export function render(wrap, ctx) {
   const positions = loadPositions(user.uid, league.code, formation) || defaults;
 
   const grid = document.createElement('div');
-  grid.style.cssText = 'position:relative;width:100%;min-height:260px';
+  grid.style.cssText = 'position:relative;width:100%;min-height:280px';
 
   slots.forEach((slot, idx) => {
     const player   = team[idx] ? getPlayer(team[idx]) : null;
