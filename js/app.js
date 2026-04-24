@@ -7,6 +7,7 @@ import { render as renderMercado } from './tabs/mercado.js';
 import { render as renderClasificacion } from './tabs/clasificacion.js';
 import { render as renderPerfil }  from './tabs/perfil.js';
 import { render as renderLiga }   from './tabs/liga.js';
+import { render as renderInicio }  from './tabs/inicio.js';
 
 window.NET11 = {
   ctx: { user: null, profile: null, league: null, teamState: null },
@@ -40,7 +41,8 @@ function renderCurrentTab() {
   wrap.className = 'fade-in';
   const ctx = window.NET11.ctx;
 
-  if      (currentTab === 'equipo')         renderEquipo(wrap, ctx);
+  if      (currentTab === 'inicio')         renderInicio(wrap, ctx).catch(console.error);
+  else if (currentTab === 'equipo')         renderEquipo(wrap, ctx);
   else if (currentTab === 'mercado')        renderMercado(wrap, ctx);
   else if (currentTab === 'clasificacion')  { clasificacionUnsub = renderClasificacion(wrap, ctx); }
   else if (currentTab === 'perfil')         renderPerfil(wrap, ctx);
