@@ -110,16 +110,41 @@ export function render(wrap, ctx) {
   plantTitle.innerHTML = '📋 PLANTILLA <span>COMPLETA</span>';
   wrap.appendChild(plantTitle);
 
+  const filterBar = document.createElement('div');
+  filterBar.style.cssText = 'display:flex;gap:6px;padding:0 16px 10px;overflow-x:auto;scrollbar-width:none';
+
   const plantilla = document.createElement('div');
   plantilla.className = 'plantilla';
 
+  const FILTERS = ['Todos', 'POR', 'DEF', 'MED', 'DEL'];
+  let activeFilter = 'Todos';
+  let activeFilterBtn = null;
+
   const activePlayers = team.map((id, idx) => id ? { player: getPlayer(id), idx } : null).filter(Boolean);
 
-  if (activePlayers.length === 0 && bench.length === 0) {
-    const balance = teamState.money ?? teamState.budget;
-    plantilla.innerHTML = `<div class="plantilla-empty">Toca un hueco en el campo<br>o ve al <strong>Mercado</strong> para fichar.<br><br>💡 Presupuesto: <strong>${balance.toLocaleString('es-ES')} €</strong></div>`;
-  } else {
-    activePlayers.forEach(({ player, idx }) => {
+  function renderPlantillaContent() {
+    plantilla.innerHTML = '';
+
+    const filtered = activePlayers.filter(({ player }) =>
+      activeFilter === 'Todos' || player.pos === activeFilter
+    );
+    const benchFiltered = bench.filter(pid => {
+      const p = getPlayer(pid);
+      return p && (activeFilter === 'Todos' || p.pos === activeFilter);
+    });
+
+    if (activePlayers.length === 0 && bench.length === 0) {
+      const balance = teamState.money ?? teamState.budget;
+      plantilla.innerHTML = `<div class="plantilla-empty">Toca un hueco en el campo<br>o ve al <strong>Mercado</strong> para fichar.<br><br>💡 Presupuesto: <strong>${balance.toLocaleString('es-ES')} €</strong></div>`;
+      return;
+    }
+
+    if (filtered.length === 0 && benchFiltered.length === 0) {
+      plantilla.innerHTML = '<div class="plantilla-empty">No hay jugadores en esa posición.</div>';
+      return;
+    }
+
+    filtered.forEach(({ player, idx }) => {
       const card = buildPlayerCard(player, true, {
         onSell: () => removePlayer(idx, ctx),
         canBuy: false,
@@ -127,16 +152,18 @@ export function render(wrap, ctx) {
       });
       plantilla.appendChild(card);
     });
-    if (bench.length > 0) {
+
+    if (benchFiltered.length > 0) {
       const benchLabel = document.createElement('div');
       benchLabel.style.cssText = 'font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:12px 0 6px;padding:0 4px';
       benchLabel.textContent = '🪑 Banquillo';
       plantilla.appendChild(benchLabel);
-      bench.forEach((pid, idx) => {
-        const player = getPlayer(pid);
-        if (!player) return;
-        const card = buildPlayerCard(player, true, {
-          onSell: () => removeBenchPlayer(idx, ctx),
+      bench.forEach((pid, benchIdx) => {
+        const p = getPlayer(pid);
+        if (!p) return;
+        if (activeFilter !== 'Todos' && p.pos !== activeFilter) return;
+        const card = buildPlayerCard(p, true, {
+          onSell: () => removeBenchPlayer(benchIdx, ctx),
           canBuy: false,
           alreadyOwned: false,
         });
@@ -144,6 +171,25 @@ export function render(wrap, ctx) {
       });
     }
   }
+
+  FILTERS.forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = `filter-chip${f === 'Todos' ? ' active-all' : ''}`;
+    btn.style.cssText = 'flex-shrink:0';
+    btn.textContent = f;
+    btn.onclick = () => {
+      if (activeFilterBtn) activeFilterBtn.className = 'filter-chip';
+      btn.className = 'filter-chip active-all';
+      activeFilterBtn = btn;
+      activeFilter = f;
+      renderPlantillaContent();
+    };
+    if (f === 'Todos') activeFilterBtn = btn;
+    filterBar.appendChild(btn);
+  });
+
+  renderPlantillaContent();
+  wrap.appendChild(filterBar);
   wrap.appendChild(plantilla);
 }
 
