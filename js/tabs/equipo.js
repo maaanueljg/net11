@@ -103,6 +103,20 @@ export function render(wrap, ctx) {
     }
 
     grid.appendChild(slotEl);
+
+    const onTap = player
+      ? () => showSlotMenu(
+          slotEl,
+          () => removePlayer(idx, ctx),
+          () => moveToBench(idx, ctx),
+        )
+      : () => {
+          window.NET11.activeSlot = { pos: slot.pos, idx };
+          window.NET11.switchTab('mercado');
+          showToast(`Selecciona un ${slot.pos} en el mercado`, 'warn');
+        };
+
+    makeDraggable(slotEl, idx, positions, user.uid, league.code, formation, onTap);
   });
 
   pitchWrap.appendChild(grid);
@@ -266,6 +280,94 @@ function loadPositions(uid, leagueCode, form) {
 
 function savePositions(uid, leagueCode, form, positions) {
   localStorage.setItem(`net11_pos_${uid}_${leagueCode}_${form}`, JSON.stringify(positions));
+}
+
+function makeDraggable(slotEl, idx, positions, uid, leagueCode, form, onTap) {
+  let startX, startY, isDragging = false, tapTimer = null;
+
+  slotEl.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    startX = e.clientX;
+    startY = e.clientY;
+    isDragging = false;
+    slotEl.setPointerCapture(e.pointerId);
+    tapTimer = setTimeout(() => { tapTimer = null; }, 150);
+  });
+
+  slotEl.addEventListener('pointermove', (e) => {
+    if (tapTimer !== null) {
+      if (Math.abs(e.clientX - startX) > 5 || Math.abs(e.clientY - startY) > 5) {
+        clearTimeout(tapTimer);
+        tapTimer = null;
+        isDragging = true;
+      }
+    }
+    if (!isDragging) return;
+    const rect = slotEl.parentElement.getBoundingClientRect();
+    const x = Math.max(3, Math.min(97, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(3, Math.min(97, ((e.clientY - rect.top) / rect.height) * 100));
+    slotEl.style.left = x + '%';
+    slotEl.style.top  = y + '%';
+    positions[idx] = { x, y };
+  });
+
+  slotEl.addEventListener('pointerup', () => {
+    if (isDragging) {
+      savePositions(uid, leagueCode, form, positions);
+      isDragging = false;
+    } else if (tapTimer !== null) {
+      clearTimeout(tapTimer);
+      tapTimer = null;
+      onTap();
+    }
+  });
+
+  slotEl.addEventListener('pointercancel', () => {
+    if (isDragging) savePositions(uid, leagueCode, form, positions);
+    isDragging = false;
+    if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
+  });
+}
+
+function showSlotMenu(slotEl, onSell, onBench) {
+  document.querySelector('.slot-menu')?.remove();
+  const rect = slotEl.getBoundingClientRect();
+  const menu = document.createElement('div');
+  menu.className = 'slot-menu';
+  menu.style.cssText = `position:fixed;left:${rect.left + rect.width / 2}px;top:${rect.top - 8}px;transform:translate(-50%,-100%);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:200;min-width:140px`;
+
+  const mkBtn = (text, bg, color, cb) => {
+    const b = document.createElement('button');
+    b.style.cssText = `padding:8px 12px;border:none;border-radius:7px;background:${bg};color:${color};font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;text-align:left`;
+    b.textContent = text;
+    b.onclick = (e) => { e.stopPropagation(); menu.remove(); cb(); };
+    return b;
+  };
+
+  menu.appendChild(mkBtn('🔴 Vender',      'rgba(255,23,68,0.15)',   'var(--danger)', onSell));
+  menu.appendChild(mkBtn('🪑 Al banquillo', 'rgba(255,255,255,0.05)', 'var(--text)',   onBench));
+  document.body.appendChild(menu);
+
+  setTimeout(() => {
+    const close = (e) => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('pointerdown', close); } };
+    document.addEventListener('pointerdown', close);
+  }, 0);
+}
+
+async function moveToBench(idx, ctx) {
+  const { user, league, teamState } = ctx;
+  const pid = teamState.team[idx];
+  if (!pid) return;
+  const p = getPlayer(pid);
+  const newTeam = [...teamState.team];
+  newTeam[idx] = null;
+  const newBench = [...(teamState.bench || []), pid];
+  const newState = { ...teamState, team: newTeam, bench: newBench, totalPts: calcTotalPts(newTeam) };
+  window.NET11.ctx.teamState = newState;
+  ctx.teamState = newState;
+  await saveTeam(user.uid, league.code, newState);
+  showToast(`🪑 ${p.name} enviado al banquillo`);
+  window.NET11.refresh();
 }
 
 export async function buyPlayer(pid, ctx) {
