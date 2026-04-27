@@ -7,21 +7,32 @@ let _filterPos   = 'all';
 let _searchQuery = '';
 
 async function checkAndRefreshMarket(league) {
-  const size  = league.marketSize         ?? 0;
-  const hours = league.marketRefreshHours ?? 0;
-  if (size === 0 || hours === 0) return;
-  const last = league.marketLastRefresh ? new Date(league.marketLastRefresh).getTime() : 0;
-  if (Date.now() - last < hours * 3_600_000) return;
+  const size  = league.marketSize ?? 0;
+  const times = league.marketRefreshTimes;
+  if (size === 0 || !times || times.length === 0) return;
+
+  const now      = new Date();
+  const last     = league.marketLastRefresh ? new Date(league.marketLastRefresh) : new Date(0);
+  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const due = times.some(h => {
+    const t = new Date(dayStart.getTime() + h * 3_600_000);
+    if (t <= now && t > last) return true;
+    // Also check previous day (cross-midnight case)
+    const tYest = new Date(dayStart.getTime() - 86_400_000 + h * 3_600_000);
+    return tYest <= now && tYest > last;
+  });
+  if (!due) return;
 
   const all  = getByCompetition(league.competition);
   const pool = [...all].sort(() => Math.random() - 0.5).slice(0, size).map(p => p.id);
-  const now  = new Date().toISOString();
+  const nowStr = new Date().toISOString();
   try {
-    await updateLeague(league.code, { marketPlayers: pool, marketLastRefresh: now });
+    await updateLeague(league.code, { marketPlayers: pool, marketLastRefresh: nowStr });
     league.marketPlayers     = pool;
-    league.marketLastRefresh = now;
+    league.marketLastRefresh = nowStr;
     window.NET11.ctx.league  = league;
-  } catch { /* silent — user still sees the old pool */ }
+  } catch { /* silent */ }
 }
 
 export async function render(wrap, ctx) {
@@ -49,15 +60,19 @@ export async function render(wrap, ctx) {
   // Pool info banner (only when rotation is active)
   if ((league.marketSize ?? 0) > 0) {
     const infoBanner = document.createElement('div');
-    infoBanner.style.cssText = 'margin:0 16px 6px;padding:7px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);display:flex;align-items:center;gap:8px';
+    infoBanner.style.cssText = 'margin:0 16px 6px;padding:7px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm)';
     const poolSize = (league.marketPlayers ?? []).length;
-    let nextStr = '';
-    if ((league.marketRefreshHours ?? 0) > 0 && league.marketLastRefresh) {
-      const nextMs   = new Date(league.marketLastRefresh).getTime() + league.marketRefreshHours * 3_600_000 - Date.now();
-      const nextMins = Math.max(0, Math.round(nextMs / 60000));
-      nextStr = nextMins < 60 ? ` · Rota en ${nextMins}m` : ` · Rota en ${Math.floor(nextMins / 60)}h`;
-    } else if ((league.marketRefreshHours ?? 0) === 0) {
-      nextStr = ' · Sin rotación automática';
+    const times    = league.marketRefreshTimes || [];
+    let nextStr = ' · Sin rotación automática';
+    if (times.length > 0) {
+      const now      = new Date();
+      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const upcoming = times
+        .map(h => { const t = new Date(dayStart.getTime() + h * 3_600_000); return t > now ? t : new Date(t.getTime() + 86_400_000); })
+        .sort((a, b) => a - b);
+      const diffMins = Math.round((upcoming[0] - now) / 60000);
+      const hhmm     = `${String(upcoming[0].getHours()).padStart(2,'0')}:00`;
+      nextStr = diffMins < 60 ? ` · Rota en ${diffMins}m (${hhmm})` : ` · Próxima rotación: ${hhmm}`;
     }
     infoBanner.innerHTML = `<span style="font-size:12px;color:var(--muted)">🏪 ${poolSize} jugadores disponibles${nextStr}</span>`;
     wrap.appendChild(infoBanner);
