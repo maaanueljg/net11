@@ -120,7 +120,8 @@ export function render(wrap, ctx) {
             const p = getPlayer(pid);
             return p && p.pos === slot.pos;
           });
-          showEmptySlotMenu(slotEl, slot.pos, idx, benchOfPos, ctx);
+          if (benchOfPos.length === 0) { showToast('No hay jugadores en el banquillo para esta posición', 'warn'); return; }
+          showBenchPicker(slotEl, idx, benchOfPos, ctx);
         };
 
     makeDraggable(slotEl, idx, positions, user.uid, league.code, formation, onTap, dragAbort.signal);
@@ -444,49 +445,6 @@ function showFormationDropdown(triggerEl, formations, current, onChange) {
   }, 0);
 }
 
-function showEmptySlotMenu(slotEl, pos, slotIdx, benchPlayers, ctx) {
-  document.querySelector('.slot-menu')?.remove();
-  const rect = slotEl.getBoundingClientRect();
-  const menu = document.createElement('div');
-  menu.className = 'slot-menu';
-  menu.style.cssText = `position:fixed;left:${rect.left + rect.width / 2}px;top:${rect.top - 8}px;transform:translate(-50%,-100%);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:200;min-width:160px`;
-
-  let closeListener = null;
-  const removeMenu = () => {
-    menu.remove();
-    if (closeListener) document.removeEventListener('pointerdown', closeListener);
-  };
-
-  const mkBtn = (text, bg, color, disabled, cb) => {
-    const b = document.createElement('button');
-    b.style.cssText = `padding:8px 12px;border:none;border-radius:7px;background:${bg};color:${color};font-family:var(--font-body);font-size:13px;font-weight:600;cursor:${disabled ? 'not-allowed' : 'pointer'};text-align:left;opacity:${disabled ? '0.4' : '1'}`;
-    b.textContent = text;
-    if (!disabled) b.onclick = (e) => { e.stopPropagation(); removeMenu(); cb(); };
-    return b;
-  };
-
-  const hasBench = benchPlayers.length > 0;
-  menu.appendChild(mkBtn(
-    hasBench ? '🪑 Del banquillo' : '🪑 Del banquillo (vacío)',
-    'rgba(255,255,255,0.05)', 'var(--text)', !hasBench,
-    () => showBenchPicker(slotEl, slotIdx, benchPlayers, ctx),
-  ));
-  menu.appendChild(mkBtn(
-    '💰 Ir al mercado',
-    'rgba(0,230,118,0.1)', 'var(--accent)', false,
-    () => {
-      window.NET11.activeSlot = { pos, idx: slotIdx };
-      window.NET11.switchTab('mercado');
-      showToast(`Selecciona un ${pos} en el mercado`, 'warn');
-    },
-  ));
-
-  document.body.appendChild(menu);
-  setTimeout(() => {
-    closeListener = (e) => { if (!menu.contains(e.target)) removeMenu(); };
-    document.addEventListener('pointerdown', closeListener);
-  }, 0);
-}
 
 function showBenchPicker(slotEl, slotIdx, benchPlayers, ctx) {
   document.querySelector('.slot-menu')?.remove();
