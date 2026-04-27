@@ -43,7 +43,7 @@ function renderCurrentTab() {
 
   if      (currentTab === 'inicio')         renderInicio(wrap, ctx).catch(console.error);
   else if (currentTab === 'equipo')         renderEquipo(wrap, ctx);
-  else if (currentTab === 'mercado')        renderMercado(wrap, ctx);
+  else if (currentTab === 'mercado')        renderMercado(wrap, ctx).catch(console.error);
   else if (currentTab === 'clasificacion')  { clasificacionUnsub = renderClasificacion(wrap, ctx); }
   else if (currentTab === 'perfil')         renderPerfil(wrap, ctx);
   else if (currentTab === 'liga')           renderLiga(wrap, ctx).catch(console.error);

@@ -1,11 +1,30 @@
 import { getByCompetition } from '../players.js';
 import { buildPlayerCard } from '../ui.js';
 import { buyPlayer } from './equipo.js';
+import { updateLeague } from '../leagues.js';
 
 let _filterPos   = 'all';
 let _searchQuery = '';
 
-export function render(wrap, ctx) {
+async function checkAndRefreshMarket(league) {
+  const size  = league.marketSize         ?? 0;
+  const hours = league.marketRefreshHours ?? 0;
+  if (size === 0 || hours === 0) return;
+  const last = league.marketLastRefresh ? new Date(league.marketLastRefresh).getTime() : 0;
+  if (Date.now() - last < hours * 3_600_000) return;
+
+  const all  = getByCompetition(league.competition);
+  const pool = [...all].sort(() => Math.random() - 0.5).slice(0, size).map(p => p.id);
+  const now  = new Date().toISOString();
+  try {
+    await updateLeague(league.code, { marketPlayers: pool, marketLastRefresh: now });
+    league.marketPlayers     = pool;
+    league.marketLastRefresh = now;
+    window.NET11.ctx.league  = league;
+  } catch { /* silent — user still sees the old pool */ }
+}
+
+export async function render(wrap, ctx) {
   const { user, league, teamState } = ctx;
 
   if (!user) {
@@ -17,6 +36,8 @@ export function render(wrap, ctx) {
     return;
   }
 
+  await checkAndRefreshMarket(league);
+
   const activeSlot = window.NET11.activeSlot;
   const title = document.createElement('div');
   title.className = 'sec-title';
@@ -24,6 +45,23 @@ export function render(wrap, ctx) {
     ? `💰 FICHAJE <span>${activeSlot.pos}</span>`
     : '💰 MERCADO <span>DE FICHAJES</span>';
   wrap.appendChild(title);
+
+  // Pool info banner (only when rotation is active)
+  if ((league.marketSize ?? 0) > 0) {
+    const infoBanner = document.createElement('div');
+    infoBanner.style.cssText = 'margin:0 16px 6px;padding:7px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);display:flex;align-items:center;gap:8px';
+    const poolSize = (league.marketPlayers ?? []).length;
+    let nextStr = '';
+    if ((league.marketRefreshHours ?? 0) > 0 && league.marketLastRefresh) {
+      const nextMs   = new Date(league.marketLastRefresh).getTime() + league.marketRefreshHours * 3_600_000 - Date.now();
+      const nextMins = Math.max(0, Math.round(nextMs / 60000));
+      nextStr = nextMins < 60 ? ` · Rota en ${nextMins}m` : ` · Rota en ${Math.floor(nextMins / 60)}h`;
+    } else if ((league.marketRefreshHours ?? 0) === 0) {
+      nextStr = ' · Sin rotación automática';
+    }
+    infoBanner.innerHTML = `<span style="font-size:12px;color:var(--muted)">🏪 ${poolSize} jugadores disponibles${nextStr}</span>`;
+    wrap.appendChild(infoBanner);
+  }
 
   const mf = document.createElement('div');
   mf.className = 'market-filters';
@@ -61,12 +99,17 @@ export function render(wrap, ctx) {
 }
 
 function updateList(listWrap, ctx) {
-  const { teamState } = ctx;
-  const activeSlot    = window.NET11.activeSlot;
-  const teamIds       = new Set([...teamState.team.filter(Boolean), ...(teamState.bench || [])]);
+  const { teamState, league } = ctx;
+  const activeSlot = window.NET11.activeSlot;
+  const teamIds    = new Set([...teamState.team.filter(Boolean), ...(teamState.bench || [])]);
+
+  const marketPool = (league?.marketSize ?? 0) > 0 && Array.isArray(league?.marketPlayers)
+    ? new Set(league.marketPlayers)
+    : null;
 
   let players = getByCompetition(teamState.competition)
     .filter(p => {
+      if (marketPool && !marketPool.has(p.id)) return false;
       if (_filterPos !== 'all' && p.pos !== _filterPos) return false;
       if (activeSlot && p.pos !== activeSlot.pos) return false;
       if (_searchQuery) {

@@ -1,4 +1,5 @@
 import { updateLeague, kickMember, getShareLink, adjustMemberMoney } from '../leagues.js';
+import { getByCompetition } from '../players.js';
 import { showToast } from '../ui.js';
 
 export async function render(wrap, ctx) {
@@ -378,6 +379,21 @@ function renderEconomia(container, league, locked) {
   });
 }
 
+/* ── Market refresh helper ──────────────────────────────── */
+
+async function doMarketRefresh(league) {
+  const size = league.marketSize ?? 0;
+  const all  = getByCompetition(league.competition);
+  const pool = size > 0
+    ? [...all].sort(() => Math.random() - 0.5).slice(0, size).map(p => p.id)
+    : all.map(p => p.id);
+  const now = new Date().toISOString();
+  await updateLeague(league.code, { marketPlayers: pool, marketLastRefresh: now });
+  league.marketPlayers     = pool;
+  league.marketLastRefresh = now;
+  window.NET11.ctx.league  = league;
+}
+
 /* ── Section: Mercado y Fichajes ────────────────────────── */
 
 function renderMercado(container, league) {
@@ -417,6 +433,79 @@ function renderMercado(container, league) {
     toggleBtn.disabled = false;
   };
   sec.appendChild(toggleBtn);
+
+  // ── Rotación de jugadores ────────────────────────────────
+  const sepEl = document.createElement('div');
+  sepEl.style.cssText = 'height:1px;background:var(--border);margin:4px 0 12px';
+  sec.appendChild(sepEl);
+
+  const rotTitle = document.createElement('div');
+  rotTitle.style.cssText = 'font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:.04em';
+  rotTitle.textContent = 'Rotación de jugadores';
+  sec.appendChild(rotTitle);
+
+  const mktSizeInput = textInput(league.marketSize ?? 0, { type: 'number', min: 0, max: 500 });
+  sec.appendChild(inputRow('Jugadores en el mercado por rotación (0 = todos)', mktSizeInput));
+
+  const mktHoursInput = textInput(league.marketRefreshHours ?? 0, { type: 'number', min: 0, max: 168 });
+  sec.appendChild(inputRow('Horas entre rotaciones (0 = sin rotación automática)', mktHoursInput));
+
+  const refreshInfoEl = document.createElement('div');
+  refreshInfoEl.style.cssText = 'font-size:11px;color:var(--muted);margin:8px 0 6px;line-height:1.6';
+
+  const updateRefreshInfo = () => {
+    const last  = league.marketLastRefresh;
+    const hours = league.marketRefreshHours ?? 0;
+    if (!last) {
+      refreshInfoEl.textContent = hours > 0
+        ? 'Sin rotaciones aún — el mercado se rotará la próxima vez que se abra.'
+        : 'Sin rotaciones configuradas.';
+      return;
+    }
+    const agoMins = Math.floor((Date.now() - new Date(last).getTime()) / 60000);
+    const fmtTime = m => m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`;
+    const agoStr  = `hace ${fmtTime(agoMins)}`;
+    if (hours > 0) {
+      const nextMins = Math.max(0, hours * 60 - agoMins);
+      refreshInfoEl.textContent = `Última rotación: ${agoStr} · Próxima: en ${fmtTime(nextMins)}`;
+    } else {
+      refreshInfoEl.textContent = `Última rotación: ${agoStr} · Rotación automática desactivada`;
+    }
+  };
+  updateRefreshInfo();
+  sec.appendChild(refreshInfoEl);
+
+  const savRotBtn = saveBtn('Guardar ajustes de rotación');
+  savRotBtn.onclick = async () => {
+    const size  = Number(mktSizeInput.value)  || 0;
+    const hours = Number(mktHoursInput.value) || 0;
+    savRotBtn.disabled = true;
+    try {
+      await updateLeague(league.code, { marketSize: size, marketRefreshHours: hours });
+      league.marketSize         = size;
+      league.marketRefreshHours = hours;
+      window.NET11.ctx.league   = league;
+      updateRefreshInfo();
+      showToast('✅ Ajustes de rotación guardados');
+    } catch { showToast('Error al guardar', 'error'); }
+    savRotBtn.disabled = false;
+  };
+  sec.appendChild(savRotBtn);
+
+  const refreshNowBtn = document.createElement('button');
+  refreshNowBtn.className = 'modal-close';
+  refreshNowBtn.style.cssText = 'margin-top:8px;padding:10px;background:var(--bg4);color:var(--text);border:1px solid var(--border)';
+  refreshNowBtn.textContent = '🔄 Refrescar mercado ahora';
+  refreshNowBtn.onclick = async () => {
+    refreshNowBtn.disabled = true;
+    try {
+      await doMarketRefresh(league);
+      updateRefreshInfo();
+      showToast('✅ Mercado actualizado');
+    } catch { showToast('Error al refrescar', 'error'); }
+    refreshNowBtn.disabled = false;
+  };
+  sec.appendChild(refreshNowBtn);
 }
 
 /* ── Section: Cláusulas ─────────────────────────────────── */
