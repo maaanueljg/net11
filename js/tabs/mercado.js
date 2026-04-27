@@ -364,8 +364,9 @@ export async function render(wrap, ctx) {
     return btn;
   };
 
+  const myPendingCount = Object.values(league.marketOffers || {}).filter(o => o?.[user.uid]).length;
   tabBar.appendChild(mkTab('players',   '🏪 Jugadores'));
-  tabBar.appendChild(mkTab('mysignings',`🏆 Mis fichajes${mySigningsCount > 0 ? ` (${mySigningsCount})` : ''}`));
+  tabBar.appendChild(mkTab('mysignings',`💬 Mis ofertas${myPendingCount > 0 ? ` (${myPendingCount})` : ''}`));
   tabBar.appendChild(mkTab('signings',  '👥 Fichajes'));
   wrap.appendChild(tabBar);
 
@@ -379,6 +380,10 @@ export async function render(wrap, ctx) {
     contentArea.innerHTML = '';
 
     if (_subTab === 'mysignings') {
+      const myOffers = Object.entries(league.marketOffers || {})
+        .filter(([, pidOffers]) => pidOffers?.[user.uid])
+        .map(([pid, pidOffers]) => ({ pid: Number(pid), ...pidOffers[user.uid] }));
+      buildMyOffersSection(myOffers, league, user, contentArea, onChanged);
       renderSigningsTab(
         (league.transferHistory || []).filter(r => r.winnerUid === user.uid),
         user.uid, contentArea, 'mis'
@@ -391,11 +396,6 @@ export async function render(wrap, ctx) {
     }
 
     // ── Players tab ────────────────────────────────────────
-    const myOffers = Object.entries(league.marketOffers || {})
-      .filter(([, pidOffers]) => pidOffers?.[user.uid])
-      .map(([pid, pidOffers]) => ({ pid: Number(pid), ...pidOffers[user.uid] }));
-    buildMyOffersSection(myOffers, league, user, contentArea, onChanged);
-
     const mf = document.createElement('div');
     mf.className = 'market-filters';
 
