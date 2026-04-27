@@ -1,4 +1,4 @@
-import { updateLeague, kickMember, getShareLink, adjustMemberMoney } from '../leagues.js';
+import { updateLeague, kickMember, getShareLink, adjustMemberMoney, resolveMarketOffers } from '../leagues.js';
 import { getByCompetition } from '../players.js';
 import { showToast } from '../ui.js';
 
@@ -387,11 +387,23 @@ async function doMarketRefresh(league) {
   const pool = size > 0
     ? [...all].sort(() => Math.random() - 0.5).slice(0, size).map(p => p.id)
     : all.map(p => p.id);
-  const now = new Date().toISOString();
-  await updateLeague(league.code, { marketPlayers: pool, marketLastRefresh: now });
+
+  // Resolve pending offers (inside a transaction) then update pool
+  const { results, now } = await resolveMarketOffers(league, pool);
   league.marketPlayers     = pool;
   league.marketLastRefresh = now;
+  league.marketOffers      = {};
+  league.marketResults     = results;
   window.NET11.ctx.league  = league;
+
+  // Sync current user's teamState if they won something
+  const myResult = results.find(r => r.winnerUid === window.NET11.ctx.user?.uid);
+  if (myResult && window.NET11.ctx.teamState) {
+    const ts = window.NET11.ctx.teamState;
+    ts.bench = [...(ts.bench || []), myResult.pid];
+    ts.money = (ts.money ?? 0) - myResult.amount;
+    window.NET11.ctx.teamState = ts;
+  }
 }
 
 /* ── 24h time clock picker ──────────────────────────────── */

@@ -113,6 +113,97 @@ export async function kickMember(code, memberUid) {
   });
 }
 
+/* ── Market offer helpers ───────────────────────────────── */
+
+export async function placeOffer(leagueCode, pid, uid, amount) {
+  await updateDoc(doc(db, 'leagues', leagueCode.toUpperCase()), {
+    [`marketOffers.${pid}.${uid}`]: { amount, createdAt: new Date().toISOString() },
+  });
+}
+
+export async function cancelOffer(leagueCode, pid, uid) {
+  await updateDoc(doc(db, 'leagues', leagueCode.toUpperCase()), {
+    [`marketOffers.${pid}.${uid}`]: deleteField(),
+  });
+}
+
+export async function resolveMarketOffers(league, newPool) {
+  const leagueRef = doc(db, 'leagues', league.code.toUpperCase());
+  const results   = [];
+  const now       = new Date().toISOString();
+
+  await runTransaction(db, async tx => {
+    const leagueSnap = await tx.get(leagueRef);
+    if (!leagueSnap.exists()) return;
+    const offers = leagueSnap.data().marketOffers || {};
+
+    if (Object.keys(offers).length === 0) {
+      tx.update(leagueRef, { marketPlayers: newPool, marketLastRefresh: now, marketResults: [] });
+      return;
+    }
+
+    // Read team docs for every user who placed an offer
+    const teamRefs  = {};
+    const teamDatas = {};
+    for (const pidOffers of Object.values(offers)) {
+      for (const uid of Object.keys(pidOffers)) {
+        if (!teamRefs[uid]) {
+          const ref  = doc(db, 'users', uid, 'leagueTeams', league.code.toUpperCase());
+          const snap = await tx.get(ref);
+          teamRefs[uid]  = ref;
+          teamDatas[uid] = snap.exists()
+            ? { money: snap.data().money ?? 0, bench: [...(snap.data().bench || [])] }
+            : null;
+        }
+      }
+    }
+
+    // In-flight state so a user winning multiple players is handled correctly
+    const state = {};
+    for (const [uid, d] of Object.entries(teamDatas)) {
+      if (d) state[uid] = { money: d.money, bench: [...d.bench] };
+    }
+
+    for (const [pidStr, pidOffers] of Object.entries(offers)) {
+      const pid    = Number(pidStr);
+      const sorted = Object.entries(pidOffers)
+        .sort(([, a], [, b]) => b.amount - a.amount || a.createdAt.localeCompare(b.createdAt));
+
+      let winnerUid = null, winnerAmt = 0;
+      for (const [uid, offer] of sorted) {
+        if (state[uid] && state[uid].money >= offer.amount) {
+          winnerUid = uid; winnerAmt = offer.amount; break;
+        }
+      }
+
+      if (winnerUid) {
+        state[winnerUid].money -= winnerAmt;
+        state[winnerUid].bench.push(pid);
+        results.push({ pid, winnerUid, winnerName: league.memberNames?.[winnerUid] || '?', amount: winnerAmt });
+      } else {
+        results.push({ pid, noWinner: true });
+      }
+    }
+
+    // Write team updates
+    for (const [uid, s] of Object.entries(state)) {
+      const orig = teamDatas[uid];
+      if (s.money !== orig.money || s.bench.length !== orig.bench.length) {
+        tx.update(teamRefs[uid], { money: s.money, bench: s.bench });
+      }
+    }
+
+    tx.update(leagueRef, {
+      marketOffers:      {},
+      marketResults:     results,
+      marketPlayers:     newPool,
+      marketLastRefresh: now,
+    });
+  });
+
+  return { results, now };
+}
+
 export async function adjustMemberMoney(leagueCode, uid, amount) {
   if (!amount || isNaN(amount)) throw new Error('Importe inválido');
   const teamRef = doc(db, 'users', uid, 'leagueTeams', leagueCode.toUpperCase());
