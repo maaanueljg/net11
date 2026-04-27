@@ -193,11 +193,19 @@ export async function resolveMarketOffers(league, newPool) {
       }
     }
 
+    // Append won transfers to history (keep last 300)
+    const prevHistory = leagueSnap.data().transferHistory || [];
+    const newEntries  = results
+      .filter(r => r.winnerUid)
+      .map(r => ({ pid: r.pid, winnerUid: r.winnerUid, winnerName: r.winnerName, amount: r.amount, resolvedAt: now }));
+    const transferHistory = [...prevHistory, ...newEntries].slice(-300);
+
     tx.update(leagueRef, {
       marketOffers:      {},
       marketResults:     results,
       marketPlayers:     newPool,
       marketLastRefresh: now,
+      transferHistory,
     });
   });
 

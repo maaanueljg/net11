@@ -47,17 +47,17 @@ async function checkAndRefreshMarket(league) {
   } catch { /* silent */ }
 }
 
-/* ── Results sub-tab ─────────────────────────────────────── */
+/* ── Signings sub-tabs ───────────────────────────────────── */
 
-function renderResultsTab(results, myUid, wrap) {
-  const won  = (results || []).filter(r => r.winnerUid);
-  const none = (results || []).filter(r => !r.winnerUid);
+function renderSigningsTab(entries, myUid, wrap, mode) {
+  // mode: 'mis' = only mine | 'all' = everyone
+  const sorted = [...entries].sort((a, b) => b.resolvedAt?.localeCompare(a.resolvedAt ?? '') ?? 0);
 
-  if (results.length === 0) {
+  if (sorted.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'plantilla-empty';
     empty.style.margin = '24px 16px';
-    empty.textContent = 'No hay resultados del último refresco.';
+    empty.textContent = mode === 'mis' ? 'Aún no has fichado ningún jugador.' : 'Sin fichajes aún en esta liga.';
     wrap.appendChild(empty);
     return;
   }
@@ -65,56 +65,28 @@ function renderResultsTab(results, myUid, wrap) {
   const container = document.createElement('div');
   container.style.cssText = 'padding:0 16px 16px';
 
-  if (won.length > 0) {
-    const card = document.createElement('div');
-    card.style.cssText = 'background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px';
+  const card = document.createElement('div');
+  card.style.cssText = 'background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden';
 
-    const hdr = document.createElement('div');
-    hdr.style.cssText = 'padding:10px 14px;border-bottom:1px solid var(--border)';
-    hdr.innerHTML = `<span style="font-size:13px;font-weight:700;color:var(--text)">✅ Jugadores adjudicados</span>`;
-    card.appendChild(hdr);
+  sorted.forEach(r => {
+    const p    = getPlayer(r.pid);
+    const isMe = r.winnerUid === myUid;
+    const date = r.resolvedAt ? new Date(r.resolvedAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : '';
 
-    won.forEach(r => {
-      const p    = getPlayer(r.pid);
-      const isMe = r.winnerUid === myUid;
-      const row  = document.createElement('div');
-      row.style.cssText = `display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);${isMe ? 'background:rgba(0,230,118,0.05)' : ''}`;
-      row.innerHTML = `
-        <span style="font-size:20px">${p?.emoji || '⚽'}</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:${isMe ? 'var(--accent)' : 'var(--text)'}">${p?.name || `#${r.pid}`}</div>
-          <div style="font-size:11px;color:var(--muted)">${r.winnerName}${isMe ? ' · Tú' : ''}</div>
-        </div>
-        <span style="font-size:13px;font-weight:700;color:var(--accent)">${(r.amount / 1e6).toFixed(1)} M€</span>`;
-      card.appendChild(row);
-    });
+    const row = document.createElement('div');
+    row.style.cssText = `display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);${isMe ? 'background:rgba(0,230,118,0.04)' : ''}`;
+    row.innerHTML = `
+      <span style="font-size:22px">${p?.emoji || '⚽'}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:${isMe ? 'var(--accent)' : 'var(--text)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p?.name || `#${r.pid}`}</div>
+        <div style="font-size:11px;color:var(--muted)">${mode === 'all' ? `${r.winnerName}${isMe ? ' · Tú' : ''}` : date}</div>
+      </div>
+      ${mode === 'all' ? `<span style="font-size:10px;color:var(--muted);margin-right:4px">${date}</span>` : ''}
+      <span style="font-size:12px;font-weight:700;color:var(--accent)">${(r.amount / 1e6).toFixed(1)} M€</span>`;
+    card.appendChild(row);
+  });
 
-    container.appendChild(card);
-  }
-
-  if (none.length > 0) {
-    const card = document.createElement('div');
-    card.style.cssText = 'background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden';
-
-    const hdr = document.createElement('div');
-    hdr.style.cssText = 'padding:10px 14px;border-bottom:1px solid var(--border)';
-    hdr.innerHTML = `<span style="font-size:13px;font-weight:700;color:var(--text)">❌ Sin ganador</span>`;
-    card.appendChild(hdr);
-
-    none.forEach(r => {
-      const p   = getPlayer(r.pid);
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border)';
-      row.innerHTML = `
-        <span style="font-size:18px">${p?.emoji || '⚽'}</span>
-        <span style="flex:1;font-size:12px;color:var(--muted)">${p?.name || `#${r.pid}`}</span>
-        <span style="font-size:11px;color:var(--muted)">Sin ofertas válidas</span>`;
-      card.appendChild(row);
-    });
-
-    container.appendChild(card);
-  }
-
+  container.appendChild(card);
   wrap.appendChild(container);
 }
 
@@ -328,12 +300,13 @@ export async function render(wrap, ctx) {
     return;
   }
 
-  // Refresh league doc to get fresh offers + results
+  // Refresh league doc to get fresh offers, results and transfer history
   const fresh = await getLeague(league.code);
   if (fresh) {
-    league.marketOffers  = fresh.marketOffers  || {};
-    league.marketResults = fresh.marketResults || [];
-    league.marketOpen    = fresh.marketOpen;
+    league.marketOffers     = fresh.marketOffers     || {};
+    league.marketResults    = fresh.marketResults    || [];
+    league.transferHistory  = fresh.transferHistory  || [];
+    league.marketOpen       = fresh.marketOpen;
     window.NET11.ctx.league = league;
   }
 
@@ -367,28 +340,33 @@ export async function render(wrap, ctx) {
   }
 
   // ── Sub-tab switcher ──────────────────────────────────────
-  const resultsCount = (league.marketResults || []).filter(r => r.winnerUid).length;
+  const mySigningsCount = (league.transferHistory || []).filter(r => r.winnerUid === user.uid).length;
 
   const tabBar = document.createElement('div');
   tabBar.style.cssText = 'display:flex;gap:0;margin:0 16px 12px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden';
 
   const mkTab = (key, label) => {
     const btn = document.createElement('button');
-    btn.style.cssText = 'flex:1;padding:9px 0;font-size:12px;font-weight:700;font-family:var(--font-body);border:none;cursor:pointer;transition:all .15s';
+    btn.style.cssText = 'flex:1;padding:9px 0;font-size:11px;font-weight:700;font-family:var(--font-body);border:none;cursor:pointer;transition:all .15s';
     btn.textContent = label;
-    const paint = () => {
-      const on = _subTab === key;
-      btn.style.background = on ? 'var(--accent)' : 'var(--bg4)';
-      btn.style.color      = on ? '#000'          : 'var(--muted)';
+    btn.onclick = () => {
+      _subTab = key;
+      tabBar.querySelectorAll('button').forEach(b => {
+        const on = b.dataset.key === key;
+        b.style.background = on ? 'var(--accent)' : 'var(--bg4)';
+        b.style.color      = on ? '#000' : 'var(--muted)';
+      });
+      renderContent();
     };
-    btn.onclick = () => { _subTab = key; tabBar.querySelectorAll('button').forEach(b => { const k = b.dataset.key; b.style.background = k === key ? 'var(--accent)' : 'var(--bg4)'; b.style.color = k === key ? '#000' : 'var(--muted)'; }); renderContent(); };
     btn.dataset.key = key;
-    paint();
+    btn.style.background = _subTab === key ? 'var(--accent)' : 'var(--bg4)';
+    btn.style.color      = _subTab === key ? '#000' : 'var(--muted)';
     return btn;
   };
 
-  tabBar.appendChild(mkTab('players', '🏪 Jugadores'));
-  tabBar.appendChild(mkTab('results', `📋 Resultados${resultsCount > 0 ? ` (${resultsCount})` : ''}`));
+  tabBar.appendChild(mkTab('players',   '🏪 Jugadores'));
+  tabBar.appendChild(mkTab('mysignings',`🏆 Mis fichajes${mySigningsCount > 0 ? ` (${mySigningsCount})` : ''}`));
+  tabBar.appendChild(mkTab('signings',  '👥 Fichajes'));
   wrap.appendChild(tabBar);
 
   // ── Content area (swapped on tab change) ──────────────────
@@ -400,8 +378,15 @@ export async function render(wrap, ctx) {
   const renderContent = () => {
     contentArea.innerHTML = '';
 
-    if (_subTab === 'results') {
-      renderResultsTab(league.marketResults || [], user.uid, contentArea);
+    if (_subTab === 'mysignings') {
+      renderSigningsTab(
+        (league.transferHistory || []).filter(r => r.winnerUid === user.uid),
+        user.uid, contentArea, 'mis'
+      );
+      return;
+    }
+    if (_subTab === 'signings') {
+      renderSigningsTab(league.transferHistory || [], user.uid, contentArea, 'all');
       return;
     }
 
