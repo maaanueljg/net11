@@ -394,6 +394,147 @@ async function doMarketRefresh(league) {
   window.NET11.ctx.league  = league;
 }
 
+/* ── Rotation clock picker ──────────────────────────────── */
+
+function buildRotationPicker(initHours, onchange) {
+  // 8 preset hour values placed evenly around the clock face
+  const SLOTS     = [1, 2, 3, 4, 6, 8, 12, 24];
+  const DAILY_MAP = { 1: 24, 2: 12, 3: 8, 4: 6, 6: 4, 8: 3, 12: 2, 24: 1 };
+  const SIZE = 186, cx = 93, cy = 93;
+  const R_RING = 72, R_HAND = 55, R_HIT = 16;
+
+  let selectedH = SLOTS.includes(initHours) ? initHours : 0;
+  let enabled   = selectedH > 0;
+
+  const root = document.createElement('div');
+
+  // ── Enable toggle ────────────────────────────────────────
+  const togRow = document.createElement('div');
+  togRow.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:12px';
+  const togCheck = document.createElement('input');
+  togCheck.type = 'checkbox'; togCheck.checked = enabled;
+  togCheck.style.cssText = 'width:16px;height:16px;cursor:pointer;accent-color:var(--accent)';
+  const togLbl = document.createElement('label');
+  togLbl.style.cssText = 'font-size:13px;color:var(--text);cursor:pointer';
+  togLbl.textContent = 'Rotación automática';
+  togRow.appendChild(togCheck); togRow.appendChild(togLbl);
+  root.appendChild(togRow);
+
+  // ── Picker area (dims when disabled) ────────────────────
+  const pickerWrap = document.createElement('div');
+  const setDimmed = d => {
+    pickerWrap.style.opacity       = d ? '0.35' : '1';
+    pickerWrap.style.pointerEvents = d ? 'none'  : 'auto';
+  };
+  pickerWrap.style.transition = 'opacity 0.2s';
+  setDimmed(!enabled);
+  root.appendChild(pickerWrap);
+
+  // ── SVG clock ───────────────────────────────────────────
+  const NS  = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', SIZE); svg.setAttribute('height', SIZE);
+  svg.setAttribute('viewBox', `0 0 ${SIZE} ${SIZE}`);
+  svg.style.cssText = 'display:block;margin:0 auto';
+
+  const mkEl = (tag, attrs) => {
+    const el = document.createElementNS(NS, tag);
+    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+    return el;
+  };
+
+  // Background ring
+  svg.appendChild(mkEl('circle', { cx, cy, r: R_RING + R_HIT + 4, fill: 'var(--bg4)', stroke: 'var(--border)', 'stroke-width': '1' }));
+
+  // Hand
+  const hand = mkEl('line', { x1: cx, y1: cy, x2: cx, y2: cy, stroke: 'var(--accent)', 'stroke-width': '2.5', 'stroke-linecap': 'round', opacity: '0' });
+  svg.appendChild(hand);
+
+  // Center dot
+  svg.appendChild(mkEl('circle', { cx, cy, r: 5, fill: 'var(--accent)' }));
+
+  // Center label: big number
+  const cNum = mkEl('text', { x: cx, y: cy - 3, 'text-anchor': 'middle', 'dominant-baseline': 'auto', fill: 'var(--accent)', 'font-size': '22', 'font-weight': '700', 'font-family': 'var(--font-head)' });
+  const cSub = mkEl('text', { x: cx, y: cy + 14, 'text-anchor': 'middle', fill: 'var(--muted)', 'font-size': '9', 'font-family': 'var(--font-body)' });
+  svg.appendChild(cNum); svg.appendChild(cSub);
+
+  // Markers
+  const markerMap = {}; // h -> { dot, lbl }
+  SLOTS.forEach((h, i) => {
+    const angle = (i / SLOTS.length) * 2 * Math.PI - Math.PI / 2;
+    const mx = cx + R_RING * Math.cos(angle);
+    const my = cy + R_RING * Math.sin(angle);
+
+    const dot = mkEl('circle', { cx: mx, cy: my, r: R_HIT, fill: 'transparent', stroke: 'var(--border)', 'stroke-width': '1', cursor: 'pointer' });
+    const lbl = mkEl('text', { x: mx, y: my + 4, 'text-anchor': 'middle', 'font-size': '10', 'font-weight': '600', 'font-family': 'var(--font-body)', fill: 'var(--muted)', 'pointer-events': 'none' });
+    lbl.textContent = `${h}h`;
+
+    dot.onclick = () => pick(h);
+    svg.appendChild(dot); svg.appendChild(lbl);
+    markerMap[h] = { dot, lbl, angle };
+  });
+
+  pickerWrap.appendChild(svg);
+
+  // ── Daily-frequency chips ───────────────────────────────
+  const chipsWrap = document.createElement('div');
+  chipsWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px';
+  const chipMap = {};
+  SLOTS.forEach(h => {
+    const freq = DAILY_MAP[h];
+    const chip = document.createElement('button');
+    chip.style.cssText = 'padding:5px 10px;border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font-body);transition:all .15s';
+    chip.textContent = `${freq}x/día`;
+    chip.title = `cada ${h}h`;
+    chip.onclick = () => pick(h);
+    chipsWrap.appendChild(chip);
+    chipMap[h] = chip;
+  });
+  pickerWrap.appendChild(chipsWrap);
+
+  // ── Update visuals ──────────────────────────────────────
+  const paint = () => {
+    SLOTS.forEach(h => {
+      const { dot, lbl, angle } = markerMap[h];
+      const on = h === selectedH;
+      dot.setAttribute('fill',   on ? 'rgba(0,230,118,0.18)' : 'transparent');
+      dot.setAttribute('stroke', on ? 'var(--accent)'        : 'var(--border)');
+      lbl.setAttribute('fill',   on ? 'var(--accent)'        : 'var(--muted)');
+      lbl.setAttribute('font-weight', on ? '700' : '600');
+
+      chipMap[h].style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+      chipMap[h].style.background  = on ? 'rgba(0,230,118,0.1)' : 'var(--bg4)';
+      chipMap[h].style.color       = on ? 'var(--accent)' : 'var(--muted)';
+    });
+    if (selectedH > 0) {
+      const { angle } = markerMap[selectedH];
+      hand.setAttribute('x2', cx + R_HAND * Math.cos(angle));
+      hand.setAttribute('y2', cy + R_HAND * Math.sin(angle));
+      hand.setAttribute('opacity', '0.85');
+      cNum.textContent = selectedH;
+      cSub.textContent = 'horas';
+    } else {
+      hand.setAttribute('x2', cx); hand.setAttribute('y2', cy);
+      hand.setAttribute('opacity', '0');
+      cNum.textContent = '—'; cSub.textContent = '';
+    }
+  };
+
+  const pick = h => { selectedH = h; paint(); onchange(h); };
+  paint();
+
+  // ── Toggle handler ──────────────────────────────────────
+  togCheck.onchange = () => {
+    enabled = togCheck.checked;
+    setDimmed(!enabled);
+    if (!enabled) { selectedH = 0; paint(); onchange(0); }
+    else          { pick(selectedH || SLOTS[3]); }
+  };
+
+  root.getValue = () => selectedH;
+  return root;
+}
+
 /* ── Section: Mercado y Fichajes ────────────────────────── */
 
 function renderMercado(container, league) {
@@ -447,11 +588,12 @@ function renderMercado(container, league) {
   const mktSizeInput = textInput(league.marketSize ?? 0, { type: 'number', min: 0, max: 500 });
   sec.appendChild(inputRow('Jugadores en el mercado por rotación (0 = todos)', mktSizeInput));
 
-  const mktHoursInput = textInput(league.marketRefreshHours ?? 0, { type: 'number', min: 0, max: 168 });
-  sec.appendChild(inputRow('Horas entre rotaciones (0 = sin rotación automática)', mktHoursInput));
+  let currentHours = league.marketRefreshHours ?? 0;
+  const clockPicker = buildRotationPicker(currentHours, h => { currentHours = h; });
+  sec.appendChild(clockPicker);
 
   const refreshInfoEl = document.createElement('div');
-  refreshInfoEl.style.cssText = 'font-size:11px;color:var(--muted);margin:8px 0 6px;line-height:1.6';
+  refreshInfoEl.style.cssText = 'font-size:11px;color:var(--muted);margin:12px 0 6px;line-height:1.6';
 
   const updateRefreshInfo = () => {
     const last  = league.marketLastRefresh;
@@ -477,8 +619,8 @@ function renderMercado(container, league) {
 
   const savRotBtn = saveBtn('Guardar ajustes de rotación');
   savRotBtn.onclick = async () => {
-    const size  = Number(mktSizeInput.value)  || 0;
-    const hours = Number(mktHoursInput.value) || 0;
+    const size  = Number(mktSizeInput.value) || 0;
+    const hours = currentHours;
     savRotBtn.disabled = true;
     try {
       await updateLeague(league.code, { marketSize: size, marketRefreshHours: hours });
