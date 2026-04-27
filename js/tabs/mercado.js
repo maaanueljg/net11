@@ -4,6 +4,7 @@ import { showToast } from '../ui.js';
 
 let _filterPos   = 'all';
 let _searchQuery = '';
+let _subTab      = 'players'; // 'players' | 'results'
 
 const POS_COLOR = { POR: 'var(--por)', DEF: 'var(--def)', MED: 'var(--med)', DEL: 'var(--del)' };
 
@@ -46,35 +47,75 @@ async function checkAndRefreshMarket(league) {
   } catch { /* silent */ }
 }
 
-/* ── Market results banner ───────────────────────────────── */
+/* ── Results sub-tab ─────────────────────────────────────── */
 
-function buildResultsBanner(results, myUid, wrap) {
-  if (!results || results.length === 0) return;
-  const won = results.filter(r => r.winnerUid);
-  if (won.length === 0) return;
+function renderResultsTab(results, myUid, wrap) {
+  const won  = (results || []).filter(r => r.winnerUid);
+  const none = (results || []).filter(r => !r.winnerUid);
 
-  const banner = document.createElement('div');
-  banner.style.cssText = 'margin:0 16px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden';
+  if (results.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'plantilla-empty';
+    empty.style.margin = '24px 16px';
+    empty.textContent = 'No hay resultados del último refresco.';
+    wrap.appendChild(empty);
+    return;
+  }
 
-  const header = document.createElement('div');
-  header.style.cssText = 'padding:8px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)';
-  header.innerHTML = `<span style="font-size:12px;font-weight:700;color:var(--text)">📋 Último refresco</span>`;
-  banner.appendChild(header);
+  const container = document.createElement('div');
+  container.style.cssText = 'padding:0 16px 16px';
 
-  won.forEach(r => {
-    const p     = getPlayer(r.pid);
-    const isMe  = r.winnerUid === myUid;
-    const row   = document.createElement('div');
-    row.style.cssText = 'padding:6px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)';
-    row.innerHTML = `
-      <span style="font-size:16px">${p?.emoji || '⚽'}</span>
-      <span style="flex:1;font-size:12px;font-weight:600;color:${isMe ? 'var(--accent)' : 'var(--text)'}">${p?.name || `#${r.pid}`}</span>
-      <span style="font-size:11px;color:var(--muted)">${r.winnerName}</span>
-      <span style="font-size:11px;font-weight:700;color:var(--accent)">${(r.amount / 1e6).toFixed(1)} M€</span>`;
-    banner.appendChild(row);
-  });
+  if (won.length > 0) {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px';
 
-  wrap.appendChild(banner);
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'padding:10px 14px;border-bottom:1px solid var(--border)';
+    hdr.innerHTML = `<span style="font-size:13px;font-weight:700;color:var(--text)">✅ Jugadores adjudicados</span>`;
+    card.appendChild(hdr);
+
+    won.forEach(r => {
+      const p    = getPlayer(r.pid);
+      const isMe = r.winnerUid === myUid;
+      const row  = document.createElement('div');
+      row.style.cssText = `display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);${isMe ? 'background:rgba(0,230,118,0.05)' : ''}`;
+      row.innerHTML = `
+        <span style="font-size:20px">${p?.emoji || '⚽'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:${isMe ? 'var(--accent)' : 'var(--text)'}">${p?.name || `#${r.pid}`}</div>
+          <div style="font-size:11px;color:var(--muted)">${r.winnerName}${isMe ? ' · Tú' : ''}</div>
+        </div>
+        <span style="font-size:13px;font-weight:700;color:var(--accent)">${(r.amount / 1e6).toFixed(1)} M€</span>`;
+      card.appendChild(row);
+    });
+
+    container.appendChild(card);
+  }
+
+  if (none.length > 0) {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden';
+
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'padding:10px 14px;border-bottom:1px solid var(--border)';
+    hdr.innerHTML = `<span style="font-size:13px;font-weight:700;color:var(--text)">❌ Sin ganador</span>`;
+    card.appendChild(hdr);
+
+    none.forEach(r => {
+      const p   = getPlayer(r.pid);
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border)';
+      row.innerHTML = `
+        <span style="font-size:18px">${p?.emoji || '⚽'}</span>
+        <span style="flex:1;font-size:12px;color:var(--muted)">${p?.name || `#${r.pid}`}</span>
+        <span style="font-size:11px;color:var(--muted)">Sin ofertas válidas</span>`;
+      card.appendChild(row);
+    });
+
+    container.appendChild(card);
+  }
+
+  wrap.appendChild(container);
 }
 
 /* ── My pending offers section ───────────────────────────── */
@@ -325,51 +366,86 @@ export async function render(wrap, ctx) {
     wrap.appendChild(poolBanner);
   }
 
-  // Market results from last refresh
-  buildResultsBanner(league.marketResults, user.uid, wrap);
+  // ── Sub-tab switcher ──────────────────────────────────────
+  const resultsCount = (league.marketResults || []).filter(r => r.winnerUid).length;
 
-  // Rebuild on offer change
+  const tabBar = document.createElement('div');
+  tabBar.style.cssText = 'display:flex;gap:0;margin:0 16px 12px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden';
+
+  const mkTab = (key, label) => {
+    const btn = document.createElement('button');
+    btn.style.cssText = 'flex:1;padding:9px 0;font-size:12px;font-weight:700;font-family:var(--font-body);border:none;cursor:pointer;transition:all .15s';
+    btn.textContent = label;
+    const paint = () => {
+      const on = _subTab === key;
+      btn.style.background = on ? 'var(--accent)' : 'var(--bg4)';
+      btn.style.color      = on ? '#000'          : 'var(--muted)';
+    };
+    btn.onclick = () => { _subTab = key; tabBar.querySelectorAll('button').forEach(b => { const k = b.dataset.key; b.style.background = k === key ? 'var(--accent)' : 'var(--bg4)'; b.style.color = k === key ? '#000' : 'var(--muted)'; }); renderContent(); };
+    btn.dataset.key = key;
+    paint();
+    return btn;
+  };
+
+  tabBar.appendChild(mkTab('players', '🏪 Jugadores'));
+  tabBar.appendChild(mkTab('results', `📋 Resultados${resultsCount > 0 ? ` (${resultsCount})` : ''}`));
+  wrap.appendChild(tabBar);
+
+  // ── Content area (swapped on tab change) ──────────────────
+  const contentArea = document.createElement('div');
+  wrap.appendChild(contentArea);
+
   const onChanged = () => window.NET11.refresh();
 
-  // My pending offers
-  const myOffers = Object.entries(league.marketOffers || {})
-    .filter(([, pidOffers]) => pidOffers?.[user.uid])
-    .map(([pid, pidOffers]) => ({ pid: Number(pid), ...pidOffers[user.uid] }));
-  buildMyOffersSection(myOffers, league, user, wrap, onChanged);
+  const renderContent = () => {
+    contentArea.innerHTML = '';
 
-  // Filters
-  const mf = document.createElement('div');
-  mf.className = 'market-filters';
+    if (_subTab === 'results') {
+      renderResultsTab(league.marketResults || [], user.uid, contentArea);
+      return;
+    }
 
-  const search = document.createElement('input');
-  search.type = 'text'; search.className = 'search-box';
-  search.placeholder = '🔍  Buscar jugador o equipo...';
-  search.value = _searchQuery;
-  search.oninput = e => { _searchQuery = e.target.value; renderList(listWrap, ctx); };
-  mf.appendChild(search);
+    // ── Players tab ────────────────────────────────────────
+    const myOffers = Object.entries(league.marketOffers || {})
+      .filter(([, pidOffers]) => pidOffers?.[user.uid])
+      .map(([pid, pidOffers]) => ({ pid: Number(pid), ...pidOffers[user.uid] }));
+    buildMyOffersSection(myOffers, league, user, contentArea, onChanged);
 
-  const prow = document.createElement('div');
-  prow.className = 'filter-row';
-  [['all','Todos'],['POR','POR'],['DEF','DEF'],['MED','MED'],['DEL','DEL']].forEach(([val, label]) => {
-    const btn = document.createElement('button');
-    const cls = _filterPos === val ? (val === 'all' ? ' active-all' : ` active-${val.toLowerCase()}`) : '';
-    btn.className = `filter-chip${cls}`;
-    btn.textContent = label;
-    btn.onclick = () => {
-      _filterPos = val;
-      prow.querySelectorAll('.filter-chip').forEach(b => b.className = 'filter-chip');
-      btn.className = `filter-chip${val === 'all' ? ' active-all' : ` active-${val.toLowerCase()}`}`;
-      renderList(listWrap, ctx);
-    };
-    prow.appendChild(btn);
-  });
-  mf.appendChild(prow);
-  wrap.appendChild(mf);
+    const mf = document.createElement('div');
+    mf.className = 'market-filters';
 
-  const listWrap = document.createElement('div');
-  listWrap.style.padding = '0 16px 16px';
-  wrap.appendChild(listWrap);
-  renderList(listWrap, ctx);
+    const search = document.createElement('input');
+    search.type = 'text'; search.className = 'search-box';
+    search.placeholder = '🔍  Buscar jugador o equipo...';
+    search.value = _searchQuery;
+    search.oninput = e => { _searchQuery = e.target.value; renderList(listWrap, ctx); };
+    mf.appendChild(search);
+
+    const prow = document.createElement('div');
+    prow.className = 'filter-row';
+    [['all','Todos'],['POR','POR'],['DEF','DEF'],['MED','MED'],['DEL','DEL']].forEach(([val, label]) => {
+      const btn = document.createElement('button');
+      const cls = _filterPos === val ? (val === 'all' ? ' active-all' : ` active-${val.toLowerCase()}`) : '';
+      btn.className = `filter-chip${cls}`;
+      btn.textContent = label;
+      btn.onclick = () => {
+        _filterPos = val;
+        prow.querySelectorAll('.filter-chip').forEach(b => b.className = 'filter-chip');
+        btn.className = `filter-chip${val === 'all' ? ' active-all' : ` active-${val.toLowerCase()}`}`;
+        renderList(listWrap, ctx);
+      };
+      prow.appendChild(btn);
+    });
+    mf.appendChild(prow);
+    contentArea.appendChild(mf);
+
+    const listWrap = document.createElement('div');
+    listWrap.style.padding = '0 16px 16px';
+    contentArea.appendChild(listWrap);
+    renderList(listWrap, ctx);
+  };
+
+  renderContent();
 }
 
 function renderList(listWrap, ctx) {
